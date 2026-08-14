@@ -79,6 +79,13 @@ public final class DecisionEngine {
             return new Decision(Quality.REVIEW, "Viable role fit but below keep threshold", score, roles);
         }
 
+        // A preferred main stat is meaningful evidence even when the substat
+        // role fit is weak. Keep this out of KEEP; it only prevents premature
+        // deletion of potentially useful slot/main-stat combinations.
+        if (best != null && best.mainStatPreferred() && best.usefulStatCount() >= 1) {
+            return new Decision(Quality.REVIEW, "Preferred main stat with limited role fit", score, roles);
+        }
+
         if (score.score() >= reviewScore) {
             return new Decision(Quality.REVIEW, "Borderline statistical quality", score, roles);
         }
@@ -87,6 +94,111 @@ public final class DecisionEngine {
         // exceptional Speed, no multi-stat role fit, no spike+role signal,
         // and low statistical score.
         return new Decision(Quality.DELETE_CANDIDATE, "Low score with no meaningful role fit", score, roles);
+    }
+
+    public Decision evaluate(
+            Gear gear,
+            GearScore gearScore,
+            RoleEvaluation roleEvaluation
+    ) {
+        if (gear == null) {
+            throw new IllegalArgumentException("gear must not be null");
+        }
+        if (gearScore == null) {
+            throw new IllegalArgumentException("gearScore must not be null");
+        }
+        if (roleEvaluation == null) {
+            throw new IllegalArgumentException("roleEvaluation must not be null");
+        }
+
+        // Safety: modified substats should never be deletion candidates.
+        if (gearScore.hasModified()) {
+            return new Decision(
+                    Quality.KEEP,
+                    "Modified Substat (Safe)",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        // Safety: exceptional Speed should never be automatically deleted.
+        boolean hasExceptionalSpeed = gear.getSubstats() != null
+                && gear.getSubstats().stream()
+                .anyMatch(s -> s != null
+                        && "Speed".equals(s.getType())
+                        && s.getValue() >= 15);
+
+        if (hasExceptionalSpeed) {
+            return new Decision(
+                    Quality.KEEP,
+                    "Exceptional Speed",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        RoleScore bestRole = roleEvaluation.bestRole() == Role.NONE
+                ? null
+                : roleEvaluation.scoreFor(roleEvaluation.bestRole());
+
+        int usefulStats = bestRole == null
+                ? 0
+                : bestRole.usefulStatCount();
+
+        // Three or more useful stats for a role is strong evidence.
+        if (usefulStats >= 3) {
+            return new Decision(
+                    Quality.KEEP,
+                    "Strong " + roleEvaluation.bestRole() + " role fit",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        // A concentrated roll plus at least two useful stats is also strong.
+        if (gearScore.hasSpike() && usefulStats >= 2) {
+            return new Decision(
+                    Quality.KEEP,
+                    "Spike + " + roleEvaluation.bestRole() + " role fit",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        // Two useful stats are potentially viable, but not strong enough
+        // for automatic KEEP.
+        if (usefulStats >= 2) {
+            return new Decision(
+                    Quality.REVIEW,
+                    roleEvaluation.bestRole() + " role fit",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        /*
+         * At this stage we deliberately avoid an arbitrary Gear Score threshold.
+         *
+         * Gear Score is a ranking/statistical signal, not a deletion rule.
+         * We can establish thresholds after running this against gear.txt and
+         * inspecting the resulting population.
+         */
+
+        if (gearScore.score() > 0.0) {
+            return new Decision(
+                    Quality.REVIEW,
+                    "Statistical value but insufficient role fit",
+                    gearScore,
+                    roleEvaluation
+            );
+        }
+
+        return new Decision(
+                Quality.DELETE_CANDIDATE,
+                "No meaningful statistical or role value",
+                gearScore,
+                roleEvaluation
+        );
     }
 
     private boolean hasExceptionalSpeed(Gear gear) {
