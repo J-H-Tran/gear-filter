@@ -17,6 +17,9 @@ dependencies {
     // Optional: Lombok if you want to reduce boilerplate in data classes
     // compileOnly 'org.projectlombok:lombok:1.18.30'
     // annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    // JUnit 5 API and engine
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
 
 application {
@@ -25,15 +28,13 @@ application {
 }
 
 java {
-    // Set Java compatibility.
-    // Use VERSION_21 if your Gradle JVM is set to Temurin 21.
-    // Use VERSION_17 if you want broader compatibility.
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 // Ensure UTF-8 encoding for compilation (fixes potential emoji/character issues on Windows)
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
