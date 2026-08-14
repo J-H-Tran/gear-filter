@@ -56,7 +56,7 @@ public class Main {
                 .map(gear -> {
                     GearScore gearScore = gearScorer.score(gear);
                     RoleEvaluation roleEvaluation = roleEvaluator.evaluate(gear);
-                    Decision decision = decisionEngine.evaluate(
+                    Decision decision = decisionEngine.decide(
                             gear, gearScore, roleEvaluation);
                     return new AnalysisResult(gear, decision);
                 })

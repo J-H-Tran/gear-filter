@@ -71,7 +71,7 @@ public class GearInventoryAnalysisTest {
                 .map(g -> {
                     GearScore score = scorer.score(g);
                     RoleEvaluation role = roles.evaluate(g);
-                    return decisions.evaluate(g, score, role);
+                    return decisions.decide(g, score, role);
                 })
                 .collect(Collectors.groupingBy(
                         Decision::quality,
