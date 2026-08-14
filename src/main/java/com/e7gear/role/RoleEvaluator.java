@@ -133,9 +133,8 @@ public final class RoleEvaluator {
             mainPreferred = mainStats.contains(gear.getMain().getType());
         }
 
-        // Any favorable stat establishes role affinity.
-        // Minimum-stat requirements belong to DecisionEngine because they are
-        // decision policy rather than role classification.
+        // Any favorable substat establishes role affinity. Minimum-stat thresholds
+        // belong to DecisionEngine because they are decision policy.
         boolean viable = useful >= 1;
 
         // Slot context strengthens, rather than creates, viability.
