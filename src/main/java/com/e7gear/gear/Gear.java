@@ -1,4 +1,4 @@
-package com.e7gear;
+package com.e7gear.gear;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
@@ -11,6 +11,7 @@ public class Gear {
     private int enhance;
     private List<Substat> substats;
     private Long ingameId;
+    private MainStat main;
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -24,4 +25,6 @@ public class Gear {
     public void setSubstats(List<Substat> substats) { this.substats = substats; }
     public Long getIngameId() { return ingameId; }
     public void setIngameId(Long ingameId) { this.ingameId = ingameId; }
+    public MainStat getMain() { return main; }
+    public void setMain(MainStat main) { this.main = main; }
 }
