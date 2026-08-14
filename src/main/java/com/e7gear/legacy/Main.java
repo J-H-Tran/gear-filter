@@ -1,5 +1,7 @@
-package com.e7gear;
+package com.e7gear.legacy;
 
+import com.e7gear.gear.Gear;
+import com.e7gear.gear.Substat;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

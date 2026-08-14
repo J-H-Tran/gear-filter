@@ -1,4 +1,7 @@
-package com.e7gear;
+package com.e7gear.legacy;
+
+import com.e7gear.gear.Gear;
+import com.e7gear.gear.Substat;
 
 import java.util.*;
 import java.util.stream.Collectors;
