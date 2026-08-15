@@ -64,6 +64,21 @@ public final class HtmlReportGenerator {
             "Boots", "boot-item.png"
     );
 
+    // ---- Level-specific max roll values for heatmap ----
+    private static final Map<String, Map<String, Integer>> LEVEL_MAX_MAP = Map.ofEntries(
+            Map.entry("AttackPercent", Map.of("85", 8, "88", 9, "90", 9)),
+            Map.entry("DefensePercent", Map.of("85", 8, "88", 9, "90", 9)),
+            Map.entry("HealthPercent", Map.of("85", 8, "88", 9, "90", 9)),
+            Map.entry("EffectivenessPercent", Map.of("85", 8, "88", 9, "90", 9)),
+            Map.entry("EffectResistancePercent", Map.of("85", 8, "88", 9, "90", 9)),
+            Map.entry("CriticalHitChancePercent", Map.of("85", 5, "88", 6, "90", 6)),
+            Map.entry("CriticalHitDamagePercent", Map.of("85", 7, "88", 8, "90", 8)),
+            Map.entry("Speed", Map.of("85", 4, "88", 5, "90", 5)),
+            Map.entry("Attack", Map.of("85", 39, "88", 46, "90", 46)),
+            Map.entry("Defense", Map.of("85", 31, "88", 36, "90", 36)),
+            Map.entry("Health", Map.of("85", 174, "88", 202, "90", 202))
+    );
+
     private static final String ICON_IMG_TEMPLATE = "<img src=\"images/%s\" alt=\"%s\" class=\"stat-icon\">";
 
     public static void generate(Path outputPath, List<AnalysisResult> results) throws IOException {
@@ -98,7 +113,7 @@ public final class HtmlReportGenerator {
                         )
                 ));
 
-        // Set breakdown (for +15, by quality) – keep stripped for chart labels
+        // Set breakdown (for +15, by quality)
         Map<String, Map<Quality, Long>> setStats = enhanced.stream()
                 .collect(Collectors.groupingBy(
                         r -> r.gear().getSet() != null ? r.gear().getSet().replace("Set", "") : "Unknown",
@@ -122,7 +137,7 @@ public final class HtmlReportGenerator {
                         )
                 ));
 
-        // ---- REFORGE grouped by set (use full set name for icon lookup) ----
+        // ---- REFORGE grouped by set ----
         Map<String, List<AnalysisResult>> reforgeBySet = enhanced.stream()
                 .filter(r -> r.decision().quality() == Quality.REFORGE_CANDIDATE)
                 .collect(Collectors.groupingBy(
@@ -192,8 +207,8 @@ public final class HtmlReportGenerator {
         html.append("    .chart-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }\n");
         html.append("    .chart-box h3 { margin-top: 0; }\n");
         html.append("    .full-width { grid-column: 1 / -1; }\n");
-        html.append("    table { width: 100%; border-collapse: collapse; margin-top: 8px; }\n");
-        html.append("    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #30363d; font-size: 13px; }\n");
+        html.append("    table { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }\n");
+        html.append("    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #30363d; }\n");
         html.append("    th { background: #161b22; color: #8b949e; font-weight: 600; position: sticky; top: 0; }\n");
         html.append("    tr:hover { background: #1c2128; }\n");
         html.append("    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }\n");
@@ -211,6 +226,45 @@ public final class HtmlReportGenerator {
         html.append("      vertical-align: middle;\n");
         html.append("      margin-right: 2px;\n");
         html.append("    }\n");
+        html.append("    .substat-container {\n");
+        html.append("      display: inline-block;\n");
+        html.append("      min-width: 80px;\n");
+        html.append("      text-align: left;\n");
+        html.append("      white-space: nowrap;\n");
+        html.append("      margin-right: 2px;\n");
+        html.append("    }\n");
+        html.append("    .substat-value {\n");
+        html.append("      font-size: 25px;\n");
+        html.append("      line-height: 25px;\n");
+        html.append("      vertical-align: middle;\n");
+        html.append("      padding: 0 3px;\n");
+        html.append("      border-radius: 3px;\n");
+        html.append("      font-weight: 600;\n");
+        html.append("      display: inline-block;\n");
+        html.append("    }\n");
+        html.append("    .substat-rolls {\n");
+        html.append("      font-size: 16px;\n");
+        html.append("      line-height: 25px;\n");
+        html.append("      vertical-align: middle;\n");
+        html.append("      color: #8b949e;\n");
+        html.append("    }\n");
+        html.append("    .substat-modified {\n");
+        html.append("      color: #d29922;\n");
+        html.append("    }\n");
+        html.append("    #allItemsTable th:nth-child(1),\n");
+        html.append("    #allItemsTable td:nth-child(1) { width: 70px; min-width: 70px; max-width: 70px; }\n");
+        html.append("    #allItemsTable th:nth-child(2),\n");
+        html.append("    #allItemsTable td:nth-child(2) { width: 70px; min-width: 70px; max-width: 70px; }\n");
+        html.append("    #allItemsTable th:nth-child(3),\n");
+        html.append("    #allItemsTable td:nth-child(3) { width: 80px; min-width: 80px; max-width: 100px; }\n");
+        html.append("    #allItemsTable th:nth-child(4),\n");
+        html.append("    #allItemsTable td:nth-child(4) { width: 420px; min-width: 350px; max-width: 480px; }\n");
+        html.append("    #allItemsTable th:nth-child(5),\n");
+        html.append("    #allItemsTable td:nth-child(5) { width: 60px; min-width: 60px; max-width: 70px; }\n");
+        html.append("    #allItemsTable th:nth-child(6),\n");
+        html.append("    #allItemsTable td:nth-child(6) { width: 90px; min-width: 90px; max-width: 110px; }\n");
+        html.append("    #allItemsTable th:nth-child(7),\n");
+        html.append("    #allItemsTable td:nth-child(7) { width: 180px; min-width: 150px; max-width: 220px; white-space: normal; word-break: break-word; }\n");
         html.append("    .filter-bar {\n");
         html.append("      display: flex;\n");
         html.append("      flex-wrap: wrap;\n");
@@ -256,6 +310,20 @@ public final class HtmlReportGenerator {
         html.append("      text-align: center;\n");
         html.append("      padding: 20px;\n");
         html.append("    }\n");
+        html.append("    .heatmap-legend {\n");
+        html.append("      display: flex;\n");
+        html.append("      align-items: center;\n");
+        html.append("      gap: 8px;\n");
+        html.append("      font-size: 12px;\n");
+        html.append("      color: #8b949e;\n");
+        html.append("      margin-bottom: 8px;\n");
+        html.append("    }\n");
+        html.append("    .heatmap-legend .gradient {\n");
+        html.append("      width: 120px;\n");
+        html.append("      height: 12px;\n");
+        html.append("      border-radius: 6px;\n");
+        html.append("      background: linear-gradient(to right, #f85149, #f0883e, #d29922, #58a6ff, #2ea043);\n");
+        html.append("    }\n");
         html.append("  </style>\n");
         html.append("</head>\n");
         html.append("<body>\n");
@@ -300,8 +368,7 @@ public final class HtmlReportGenerator {
             List<AnalysisResult> slotDeletes = deleteBySlot.getOrDefault(slot, List.of());
             if (slotDeletes.isEmpty()) continue;
             hasDeletes = true;
-            // Header with slot icon
-            html.append("  <h3>⚔️ ").append(formatSlotWithIcon(slot)).append("</h3>\n");
+            html.append("  <h3>").append(formatSlotWithIcon(slot)).append("</h3>\n");
             html.append("  <div class=\"table-wrap\">\n");
             html.append("    <table>\n");
             html.append("      <thead><tr><th>Set</th><th>Main</th><th>Substats</th><th>Score</th><th>Reason</th></tr></thead>\n");
@@ -317,10 +384,9 @@ public final class HtmlReportGenerator {
             html.append("  <p style=\"color:#8b949e;\">No DELETE_CANDIDATE items found.</p>\n");
         }
 
-        // ---- REFORGE tables grouped by set (full set name used as key) ----
+        // ---- REFORGE tables grouped by set ----
         html.append("  <h2>🔧 Top REFORGE_CANDIDATE by Set (Lowest Current Score, Reforge makes them viable)</h2>\n");
         boolean hasReforges = false;
-        // Sort by the stripped set name for readability
         List<String> fullSetOrder = reforgeBySet.keySet().stream()
                 .sorted(Comparator.comparing(s -> s.replace("Set", "")))
                 .toList();
@@ -328,9 +394,7 @@ public final class HtmlReportGenerator {
             List<AnalysisResult> setReforges = reforgeBySet.get(fullSet);
             if (setReforges.isEmpty()) continue;
             hasReforges = true;
-            // Header with set icon
-            String stripped = fullSet.replace("Set", "");
-            html.append("  <h3>⚡ ").append(formatSetWithIcon(fullSet)).append("</h3>\n");
+            html.append("  <h3>").append(formatSetWithIcon(fullSet)).append("</h3>\n");
             html.append("  <div class=\"table-wrap\">\n");
             html.append("    <table>\n");
             html.append("      <thead><tr><th>Slot</th><th>Main</th><th>Substats</th><th>Current Score</th><th>Reason</th></tr></thead>\n");
@@ -364,6 +428,15 @@ public final class HtmlReportGenerator {
 
         // ---- All +15 items with filter bar ----
         html.append("  <h2>📊 All +15 Items (sorted by Score ascending)</h2>\n");
+
+        // ---- Heatmap Legend ----
+        html.append("  <div class=\"heatmap-legend\">\n");
+        html.append("    <span>Substat roll quality:</span>\n");
+        html.append("    <span style=\"color:#f85149;\">Low</span>\n");
+        html.append("    <div class=\"gradient\"></div>\n");
+        html.append("    <span style=\"color:#2ea043;\">High</span>\n");
+        html.append("    <span style=\"margin-left:12px;\">★ = modified</span>\n");
+        html.append("  </div>\n");
 
         // ---- Filter Bar ----
         html.append("  <div class=\"filter-bar\" id=\"filterBar\">\n");
@@ -584,7 +657,82 @@ public final class HtmlReportGenerator {
         return slot;
     }
 
-    // Row with Slot column (used for REVIEW and ALL tables)
+    // ---- Improved heatmap with 5‑stop gradient ----
+    private static String getHeatmapColor(StatType stat, double value, int level) {
+        if (stat == null) return "";
+
+        String levelKey = String.valueOf(level);
+        Map<String, Integer> levelMap = LEVEL_MAX_MAP.get(stat.displayName());
+        if (levelMap == null) return "";
+
+        Integer maxVal = levelMap.get(levelKey);
+        if (maxVal == null) {
+            maxVal = levelMap.get("90");
+            if (maxVal == null) maxVal = levelMap.get("88");
+            if (maxVal == null) maxVal = levelMap.get("85");
+        }
+        if (maxVal == null || maxVal <= 0) return "";
+
+        double ratio = Math.min(1.0, value / maxVal);
+
+        // 5‑stop gradient: red (0.0) → orange (0.25) → yellow (0.5) → cyan (0.75) → green (1.0)
+        // Stops: [0.0, 0.25, 0.5, 0.75, 1.0]
+        // Colors: [#f85149, #f0883e, #d29922, #58a6ff, #2ea043]
+
+        double[][] stops = {
+                {0.0, 0xf8, 0x51, 0x49},
+                {0.25, 0xf0, 0x88, 0x3e},
+                {0.5, 0xd2, 0x99, 0x22},
+                {0.75, 0x58, 0xa6, 0xff},
+                {1.0, 0x2e, 0xa0, 0x43}
+        };
+
+        int i;
+        for (i = 0; i < stops.length - 1; i++) {
+            if (ratio <= stops[i + 1][0]) break;
+        }
+        if (i >= stops.length - 1) i = stops.length - 2;
+
+        double t = (ratio - stops[i][0]) / (stops[i + 1][0] - stops[i][0]);
+        int r = (int) (stops[i][1] + (stops[i + 1][1] - stops[i][1]) * t);
+        int g = (int) (stops[i][2] + (stops[i + 1][2] - stops[i][2]) * t);
+        int b = (int) (stops[i][3] + (stops[i + 1][3] - stops[i][3]) * t);
+
+        r = Math.max(0, Math.min(255, r));
+        g = Math.max(0, Math.min(255, g));
+        b = Math.max(0, Math.min(255, b));
+
+        return String.format("#%02x%02x%02x", r, g, b);
+    }
+
+    // ---- Format substats with fixed-width containers ----
+    private static String formatSubstatsShort(Gear g) {
+        if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
+        int level = g.getLevel();
+
+        return g.getSubstats().stream()
+                .map(s -> {
+                    StatType stat = StatType.fromString(s.getType());
+                    String iconHtml = stat != null ? formatStatWithIcon(stat) : s.getType();
+                    String valStr = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
+                    String rollStr = String.valueOf(s.getRolls());
+                    boolean modified = s.isModified();
+
+                    String color = stat != null ? getHeatmapColor(stat, s.getValue(), level) : "";
+                    String valueStyle = color.isEmpty() ? "" : "background-color:" + color + ";";
+
+                    String modifiedMark = modified ? " <span class=\"substat-modified\">★</span>" : "";
+
+                    String valueHtml = "<span class=\"substat-value\" style=\"" + valueStyle + "\">" +
+                            valStr + "</span>" +
+                            "<span class=\"substat-rolls\">(" + rollStr + ")</span>" +
+                            modifiedMark;
+
+                    return "<span class=\"substat-container\">" + iconHtml + " " + valueHtml + "</span>";
+                })
+                .collect(Collectors.joining(""));
+    }
+
     private static String rowHtml(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
@@ -609,7 +757,6 @@ public final class HtmlReportGenerator {
                 "</tr>\n";
     }
 
-    // Row WITHOUT Slot column (used for slot-grouped DELETE tables)
     private static String rowHtmlWithoutSlot(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
@@ -627,7 +774,6 @@ public final class HtmlReportGenerator {
                 "</tr>\n";
     }
 
-    // Row for REFORGE tables (shows Slot, no Set column because it's grouped by set)
     private static String rowHtmlForReforge(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
@@ -657,28 +803,14 @@ public final class HtmlReportGenerator {
         };
     }
 
-    private static String formatSubstatsShort(Gear g) {
-        if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
-        return g.getSubstats().stream()
-                .map(s -> {
-                    StatType stat = StatType.fromString(s.getType());
-                    String iconHtml = stat != null ? formatStatWithIcon(stat) : s.getType();
-                    String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
-                    String rolls = s.getRolls() + (s.isModified() ? "★" : "");
-                    return iconHtml + "=" + val + "(" + rolls + ")";
-                })
-                .collect(Collectors.joining(" "));
-    }
-
     private static String formatSetWithIcon(String set) {
         if (set == null) return "";
-        // If it doesn't end with "Set", assume it's already stripped; we need the full name for lookup
         String key = set.endsWith("Set") ? set : set + "Set";
         String iconFile = SET_ICON_MAP.get(key);
         if (iconFile != null) {
             return String.format(ICON_IMG_TEMPLATE, iconFile, key.replace("Set", ""));
         }
-        return key.replace("Set", ""); // fallback to text
+        return key.replace("Set", "");
     }
 
     private static String formatStatWithIcon(StatType stat) {
@@ -687,7 +819,7 @@ public final class HtmlReportGenerator {
         if (iconFile != null) {
             return String.format(ICON_IMG_TEMPLATE, iconFile, stat.abbreviation());
         }
-        return stat.abbreviation(); // fallback
+        return stat.abbreviation();
     }
 
     private static String stripHtml(String html) {
