@@ -14,6 +14,7 @@ import com.e7gear.role.RoleEvaluator;
 import com.e7gear.role.RoleScore;
 import com.e7gear.scorer.GearScore;
 import com.e7gear.scorer.GearScorer;
+import com.e7gear.stats.StatType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -188,10 +189,10 @@ public class Main {
         if (substats == null || substats.isEmpty()) {
             return "";
         }
-
         return substats.stream()
                 .map(s -> {
-                    String abbreviatedType = abbreviateStatType(s.getType());
+                    StatType st = StatType.fromString(s.getType());
+                    String abbreviatedType = st == null ? s.getType() : st.abbreviation();
                     double val = s.getValue();
                     String formattedVal = (val % 1 == 0) ? String.format("%d", (long) val) : String.format("%.1f", val);
                     return String.format("%s=%s(r%d%s)",
@@ -204,30 +205,9 @@ public class Main {
     }
 
     private static String abbreviateStatType(String type) {
-        if (type == null) {
-            return "";
-        }
-
-        return switch (type.trim()) {
-            // Flat Stats
-            case "FlatAttack", "Attack", "att" -> "fAtk";
-            case "FlatDefense", "Defense", "def" -> "fDef";
-            case "FlatHealth", "Health", "max_hp" -> "fHp";
-
-            // Percentage Stats
-            case "AttackPercent", "att_rate" -> "Atk%";
-            case "DefensePercent", "def_rate" -> "Def%";
-            case "HealthPercent", "max_hp_rate" -> "Hp%";
-            case "CriticalHitChancePercent", "CriticalHitChance", "cri" -> "CC%";
-            case "CriticalHitDamagePercent", "CriticalHitDamage", "cri_dmg" -> "CDMG%";
-
-            // Utility Stats
-            case "Speed", "speed" -> "Spd";
-            case "EffectivenessPercent", "Effectiveness", "acc" -> "Eff%";
-            case "EffectResistancePercent", "EffectResistance", "res" -> "ER%";
-
-            default -> type;
-        };
+        if (type == null) return "";
+        StatType st = StatType.fromString(type);
+        return st == null ? type : st.abbreviation();
     }
 
     private record AnalysisResult(Gear gear, Decision decision) {

@@ -7,6 +7,7 @@ import com.e7gear.role.Role;
 import com.e7gear.role.RoleEvaluation;
 import com.e7gear.role.RoleScore;
 import com.e7gear.scorer.GearScore;
+import com.e7gear.stats.StatType;
 
 /**
  * Conservative final classifier using externalized configuration.
@@ -142,7 +143,10 @@ public final class DecisionEngine {
         if (gear.getSubstats() == null) return false;
         int threshold = config.openerSpeedThreshold();
         return gear.getSubstats().stream()
-                .filter(s -> s != null && "Speed".equals(s.getType()))
-                .anyMatch(s -> s.getValue() >= threshold);
+                .filter(s -> s != null)
+                .anyMatch(s -> {
+                    StatType st = StatType.fromString(s.getType());
+                    return st == StatType.SPEED && s.getValue() >= threshold;
+                });
     }
 }

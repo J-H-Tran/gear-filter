@@ -3,6 +3,7 @@ package com.e7gear.role;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
 import com.e7gear.scorer.GearScorer;
+import com.e7gear.stats.StatType;
 
 import java.util.List;
 import java.util.Map;
@@ -17,115 +18,86 @@ import java.util.Set;
  */
 public final class RoleEvaluator {
 
-    private static final Map<Role, Set<String>> ROLE_STATS = Map.of(
+    private static final List<Role> ROLES = List.of(Role.values());
+
+    // Role stat sets (using StatType)
+    private static final Map<Role, Set<StatType>> ROLE_STATS = Map.of(
             Role.DPS, Set.of(
-                    "AttackPercent", "CriticalHitChancePercent",
-                    "CriticalHitDamagePercent", "Speed"
+                    StatType.ATTACK_PERCENT,
+                    StatType.CRIT_CHANCE,
+                    StatType.CRIT_DAMAGE,
+                    StatType.SPEED
             ),
             Role.BRUISER, Set.of(
-                    "HealthPercent", "DefensePercent",
-                    "CriticalHitChancePercent", "CriticalHitDamagePercent", "Speed"
+                    StatType.HEALTH_PERCENT,
+                    StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE,
+                    StatType.CRIT_DAMAGE,
+                    StatType.SPEED
             ),
             Role.SUPPORT, Set.of(
-                    "HealthPercent", "DefensePercent",
-                    "EffectResistancePercent", "Speed"
+                    StatType.HEALTH_PERCENT,
+                    StatType.DEFENSE_PERCENT,
+                    StatType.EFFECT_RESISTANCE,
+                    StatType.SPEED
             ),
             Role.DEBUFFER, Set.of(
-                    "HealthPercent", "DefensePercent",
-                    "EffectivenessPercent", "Speed"
+                    StatType.HEALTH_PERCENT,
+                    StatType.DEFENSE_PERCENT,
+                    StatType.EFFECTIVENESS,
+                    StatType.SPEED
             )
     );
 
-    /**
-     * Slot-specific preferred substats. These are the stronger role signal;
-     * a broad ROLE_STATS match alone does not establish a strong role fit.
-     */
-    private static final Map<Role, Map<String, Set<String>>> SLOT_STATS = Map.of(
+    // Slot-specific preferred substats (using StatType)
+    private static final Map<Role, Map<String, Set<StatType>>> SLOT_STATS = Map.of(
             Role.DPS, Map.of(
-                    "Necklace", Set.of(
-                            "CriticalHitDamagePercent",
-                            "CriticalHitChancePercent",
-                            "AttackPercent"
-                    ),
-                    "Ring", Set.of("AttackPercent"),
-                    "Boots", Set.of("Speed", "AttackPercent")
+                    "Necklace", Set.of(StatType.CRIT_DAMAGE, StatType.CRIT_CHANCE, StatType.ATTACK_PERCENT),
+                    "Ring", Set.of(StatType.ATTACK_PERCENT),
+                    "Boots", Set.of(StatType.SPEED, StatType.ATTACK_PERCENT)
             ),
             Role.BRUISER, Map.of(
-                    "Necklace", Set.of(
-                            "HealthPercent", "CriticalHitChancePercent",
-                            "CriticalHitDamagePercent", "DefensePercent"
-                    ),
-                    "Ring", Set.of("HealthPercent", "DefensePercent", "AttackPercent"),
-                    "Boots", Set.of("Speed", "HealthPercent", "DefensePercent")
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.DEFENSE_PERCENT),
+                    "Ring", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.ATTACK_PERCENT),
+                    "Boots", Set.of(StatType.SPEED, StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT)
             ),
             Role.SUPPORT, Map.of(
-                    "Necklace", Set.of("HealthPercent", "DefensePercent"),
-                    "Ring", Set.of(
-                            "HealthPercent", "DefensePercent",
-                            "EffectResistancePercent"
-                    ),
-                    "Boots", Set.of("Speed", "HealthPercent")
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT),
+                    "Ring", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.EFFECT_RESISTANCE),
+                    "Boots", Set.of(StatType.SPEED, StatType.HEALTH_PERCENT)
             ),
             Role.DEBUFFER, Map.of(
-                    "Necklace", Set.of(
-                            "HealthPercent", "DefensePercent", "AttackPercent"
-                    ),
-                    "Ring", Set.of("EffectivenessPercent", "HealthPercent"),
-                    "Boots", Set.of("Speed")
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.ATTACK_PERCENT),
+                    "Ring", Set.of(StatType.EFFECTIVENESS, StatType.HEALTH_PERCENT),
+                    "Boots", Set.of(StatType.SPEED)
             )
     );
 
-    /**
-     * Preferred main stats by role and slot.
-     */
-    private static final Map<Role, Map<String, Set<String>>> MAIN_STATS = Map.of(
+    // Preferred main stats by role and slot (using StatType)
+    private static final Map<Role, Map<String, Set<StatType>>> MAIN_STATS = Map.of(
             Role.DPS, Map.of(
-                    "Necklace", Set.of(
-                            "CriticalHitDamagePercent",
-                            "CriticalHitChancePercent",
-                            "AttackPercent"
-                    ),
-                    "Ring", Set.of("AttackPercent"),
-                    "Boots", Set.of("Speed", "AttackPercent")
+                    "Necklace", Set.of(StatType.CRIT_DAMAGE, StatType.CRIT_CHANCE, StatType.ATTACK_PERCENT),
+                    "Ring", Set.of(StatType.ATTACK_PERCENT),
+                    "Boots", Set.of(StatType.SPEED, StatType.ATTACK_PERCENT)
             ),
             Role.BRUISER, Map.of(
-                    "Necklace", Set.of(
-                            "HealthPercent", "CriticalHitChancePercent",
-                            "CriticalHitDamagePercent"
-                    ),
-                    "Ring", Set.of(
-                            "HealthPercent", "DefensePercent", "AttackPercent"
-                    ),
-                    "Boots", Set.of(
-                            "Speed", "HealthPercent", "DefensePercent"
-                    )
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE),
+                    "Ring", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.ATTACK_PERCENT),
+                    "Boots", Set.of(StatType.SPEED, StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT)
             ),
             Role.SUPPORT, Map.of(
-                    "Necklace", Set.of("HealthPercent", "DefensePercent"),
-                    "Ring", Set.of(
-                            "HealthPercent", "DefensePercent",
-                            "EffectResistancePercent"
-                    ),
-                    "Boots", Set.of("Speed", "HealthPercent")
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT),
+                    "Ring", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.EFFECT_RESISTANCE),
+                    "Boots", Set.of(StatType.SPEED, StatType.HEALTH_PERCENT)
             ),
             Role.DEBUFFER, Map.of(
-                    "Necklace", Set.of(
-                            "HealthPercent", "DefensePercent", "AttackPercent"
-                    ),
-                    "Ring", Set.of("EffectivenessPercent", "HealthPercent"),
-                    "Boots", Set.of("Speed")
+                    "Necklace", Set.of(StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.ATTACK_PERCENT),
+                    "Ring", Set.of(StatType.EFFECTIVENESS, StatType.HEALTH_PERCENT),
+                    "Boots", Set.of(StatType.SPEED)
             )
-    );
-
-    private static final List<Role> ROLES = List.of(
-            Role.DPS, Role.BRUISER, Role.SUPPORT, Role.DEBUFFER
     );
 
     private final GearScorer gearScorer;
-
-    public RoleEvaluator() {
-        this(new GearScorer());
-    }
 
     public RoleEvaluator(GearScorer gearScorer) {
         this.gearScorer = gearScorer;
@@ -166,8 +138,8 @@ public final class RoleEvaluator {
         }
 
         String slot = normalizeSlot(gear.getGear());
-        Set<String> roleStats = ROLE_STATS.get(role);
-        Set<String> slotPreferredStats = SLOT_STATS
+        Set<StatType> roleStats = ROLE_STATS.get(role);
+        Set<StatType> slotPreferredStats = SLOT_STATS
                 .getOrDefault(role, Map.of())
                 .getOrDefault(slot, Set.of());
 
@@ -177,33 +149,31 @@ public final class RoleEvaluator {
 
         if (gear.getSubstats() != null) {
             for (Substat substat : gear.getSubstats()) {
-                if (substat == null || !roleStats.contains(substat.getType())) {
+                if (substat == null) continue;
+                StatType statType = StatType.fromString(substat.getType());
+                if (statType == null || !roleStats.contains(statType)) {
                     continue;
                 }
 
                 useful++;
-                score += gearScorer.calculateStatScore(
-                        substat.getType(), substat.getValue());
+                score += gearScorer.calculateStatScore(statType, substat.getValue());
 
-                if (slotPreferredStats.contains(substat.getType())) {
+                if (slotPreferredStats.contains(statType)) {
                     core++;
                 }
             }
         }
 
-        Set<String> preferredMainStats = MAIN_STATS
+        Set<StatType> preferredMainStats = MAIN_STATS
                 .getOrDefault(role, Map.of())
                 .getOrDefault(slot, Set.of());
 
         boolean mainPreferred = gear.getMain() != null
-                && preferredMainStats.contains(gear.getMain().getType());
+                && preferredMainStats.contains(StatType.fromString(gear.getMain().getType()));
 
         boolean slotCompatible = !slotPreferredStats.isEmpty()
                 && (core > 0 || mainPreferred);
 
-        // One broad role stat is affinity, not a strong role fit.
-        // Viability is intentionally still permissive; DecisionEngine decides
-        // whether the evidence is enough for KEEP/REVIEW/DELETE.
         boolean viable = useful >= 1;
 
         return new RoleScore(
@@ -229,7 +199,7 @@ public final class RoleEvaluator {
         };
     }
 
-    public static Set<String> statsFor(Role role) {
+    public static Set<StatType> statsFor(Role role) {
         return ROLE_STATS.getOrDefault(role, Set.of());
     }
 }
