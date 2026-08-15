@@ -14,6 +14,7 @@ import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Runs the complete scoring/evaluation/decision pipeline against gear.txt
@@ -89,13 +90,20 @@ public final class GearInventoryCsvReport {
     }
 
     private static String formatSubstats(List<Substat> substats) {
-        if (substats == null) return "";
-        return substats.stream()
-                .filter(s -> s != null)
-                .map(s -> s.getType() + "=" + s.getValue() + "(r" + s.getRolls()
-                        + (s.isModified() ? "*" : "") + ")")
-                .reduce((a, b) -> a + "; " + b)
-                .orElse("");
+        if (substats == null || substats.isEmpty()) {
+            return "\"\"";
+        }
+
+        String formatted = substats.stream()
+                .map(s -> String.format("%s=%.1f(r%d%s)",
+                        s.getType(),
+                        s.getValue(),
+                        s.getRolls(),
+                        s.isModified() ? "*" : ""))
+                .collect(Collectors.joining("; "));
+
+        // Wrap in double quotes for CSV safety
+        return "\"" + formatted + "\"";
     }
 
     private static String csv(Object value) {

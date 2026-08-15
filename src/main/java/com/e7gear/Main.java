@@ -5,6 +5,7 @@ import com.e7gear.engine.DecisionEngine;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.GearInventory;
 import com.e7gear.gear.Quality;
+import com.e7gear.gear.Substat;
 import com.e7gear.role.Role;
 import com.e7gear.role.RoleEvaluation;
 import com.e7gear.role.RoleEvaluator;
@@ -99,6 +100,7 @@ public class Main {
                 "enhance",
                 "mainStatType",
                 "mainStatValue",
+                "substats",
                 "gearScore",
                 "dScore",
                 "sScore",
@@ -133,8 +135,9 @@ public class Main {
                     gear.getRank(),
                     gear.getLevel(),
                     gear.getEnhance(),
-                    gear.getMainStatType(),
+                    abbreviateStatType(gear.getMainStatType()), // <-- Abbreviated MainStatType
                     gear.getMainStatValue(),
+                    formatSubstats(gear.getSubstats()),
                     score.score(),
                     score.dScore(),
                     score.sScore(),
@@ -174,6 +177,52 @@ public class Main {
         }
 
         return text;
+    }
+
+    private static String formatSubstats(List<Substat> substats) {
+        if (substats == null || substats.isEmpty()) {
+            return "";
+        }
+
+        return substats.stream()
+                .map(s -> {
+                    String abbreviatedType = abbreviateStatType(s.getType());
+                    double val = s.getValue();
+                    String formattedVal = (val % 1 == 0) ? String.format("%d", (long) val) : String.format("%.1f", val);
+                    return String.format("%s=%s(r%d%s)",
+                            abbreviatedType,
+                            formattedVal,
+                            s.getRolls(),
+                            s.isModified() ? "*" : "");
+                })
+                .collect(Collectors.joining("; "));
+    }
+
+    private static String abbreviateStatType(String type) {
+        if (type == null) {
+            return "";
+        }
+
+        return switch (type.trim()) {
+            // Flat Stats
+            case "FlatAttack", "Attack", "att" -> "fAtk";
+            case "FlatDefense", "Defense", "def" -> "fDef";
+            case "FlatHealth", "Health", "max_hp" -> "fHp";
+
+            // Percentage Stats
+            case "AttackPercent", "att_rate" -> "Atk%";
+            case "DefensePercent", "def_rate" -> "Def%";
+            case "HealthPercent", "max_hp_rate" -> "Hp%";
+            case "CriticalHitChancePercent", "CriticalHitChance", "cri" -> "CC%";
+            case "CriticalHitDamagePercent", "CriticalHitDamage", "cri_dmg" -> "CDMG%";
+
+            // Utility Stats
+            case "Speed", "speed" -> "Spd";
+            case "EffectivenessPercent", "Effectiveness", "acc" -> "Eff%";
+            case "EffectResistancePercent", "EffectResistance", "res" -> "ER%";
+
+            default -> type;
+        };
     }
 
     private record AnalysisResult(Gear gear, Decision decision) {
