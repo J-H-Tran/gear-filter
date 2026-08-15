@@ -12,7 +12,6 @@ import com.e7gear.scorer.GearScore;
 import com.e7gear.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -187,6 +186,16 @@ public final class DecisionEngine {
             return null;
         }
 
+        // Allow mod-gem if:
+        // - at least 3 useful stats (strong already, just one dead stat), OR
+        // - at least 2 useful stats AND (has a core stat OR slot-compatible)
+        if (best.usefulStatCount() < 2) {
+            return null;
+        }
+        if (best.usefulStatCount() < 3 && !best.slotCompatible() && best.coreStatCount() < 1) {
+            return null;
+        }
+
         Set<StatType> roleStats = RoleEvaluator.getRoleStats(best.role());
         if (roleStats == null || roleStats.isEmpty()) {
             return null;
@@ -223,13 +232,8 @@ public final class DecisionEngine {
                 .filter(st -> !presentStats.contains(st))
                 .toList();
 
-        // If all role stats are already present, pick the highest weight role stat as replacement
         if (missingStats.isEmpty()) {
-            StatType bestReplacement = roleStats.stream()
-                    .max(Comparator.comparingDouble(StatType::weight))
-                    .orElse(null);
-            if (bestReplacement == null) return null;
-            missingStats = List.of(bestReplacement);
+            return null; // no meaningful replacement
         }
 
         double keepThreshold = getEffectiveKeepScore(gear, best);
@@ -237,7 +241,7 @@ public final class DecisionEngine {
             Integer maxGemValue = config.modGemMax().get(replacement.displayName());
             if (maxGemValue == null) continue;
 
-            double newValue = maxGemValue.doubleValue(); // percentage or speed
+            double newValue = maxGemValue.doubleValue();
             double potentialScore = computePotentialScore(gear, worstDead, replacement, newValue);
             if (potentialScore >= keepThreshold) {
                 return new Decision(Quality.KEEP_MOD_CANDIDATE,

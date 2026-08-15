@@ -19,7 +19,7 @@ import java.util.Set;
  */
 public final class RoleEvaluator {
 
-    private static final List<Role> ROLES = List.of(Role.values());
+    private static final List<Role> ROLES = List.of(Role.DPS, Role.BRUISER, Role.SUPPORT, Role.DEBUFFER);
 
     // Role stat sets (using StatType)
     private static final Map<Role, Set<StatType>> ROLE_STATS = Map.of(
@@ -108,6 +108,7 @@ public final class RoleEvaluator {
 
     public RoleEvaluation evaluate(Gear gear) {
         List<RoleScore> scores = ROLES.stream()
+                .filter(r -> r != Role.NONE)
                 .map(role -> evaluateRole(gear, role))
                 .toList();
 
@@ -139,8 +140,18 @@ public final class RoleEvaluator {
             return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
         }
 
+        // 🟢 Skip NONE role to avoid null stats
+        if (role == Role.NONE) {
+            return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
+        }
+
         String slot = normalizeSlot(gear.getGear());
         Set<StatType> roleStats = ROLE_STATS.get(role);
+        if (roleStats == null) {
+            // Should not happen for defined roles, but safe fallback
+            return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
+        }
+
         Set<StatType> slotPreferredStats = SLOT_STATS
                 .getOrDefault(role, Map.of())
                 .getOrDefault(slot, Set.of());
@@ -178,13 +189,14 @@ public final class RoleEvaluator {
 
         boolean viable = useful >= 1;
 
-        // Apply set multiplier from config
-        double multiplier = config.setMultipliers().getOrDefault(gear.getSet(), 1.0);
+        // 🟢 Safe set multiplier with null check
+        String set = gear.getSet();
+        double multiplier = config.setMultipliers().getOrDefault(set != null ? set : "", 1.0);
         double adjustedScore = rawScore * multiplier;
 
         return new RoleScore(
                 role,
-                adjustedScore,          // now includes set weighting
+                adjustedScore,
                 useful,
                 core,
                 core,
