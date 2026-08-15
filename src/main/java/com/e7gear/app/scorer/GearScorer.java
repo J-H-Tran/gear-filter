@@ -1,4 +1,4 @@
-package com.e7gear.scorer;
+package com.e7gear.app.scorer;
 
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;

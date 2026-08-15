@@ -1,9 +1,9 @@
-package com.e7gear.role;
+package com.e7gear.app.role;
 
 import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
-import com.e7gear.scorer.GearScorer;
+import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 
 import java.util.List;

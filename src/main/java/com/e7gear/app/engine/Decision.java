@@ -1,8 +1,8 @@
-package com.e7gear.engine;
+package com.e7gear.app.engine;
 
 import com.e7gear.gear.Quality;
-import com.e7gear.role.RoleEvaluation;
-import com.e7gear.scorer.GearScore;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.scorer.GearScore;
 
 public record Decision(
         Quality quality,

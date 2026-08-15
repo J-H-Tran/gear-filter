@@ -1,4 +1,4 @@
-package com.e7gear.role;
+package com.e7gear.app.role;
 
 /**
  * Role categories used by the 2026 equipment guide.

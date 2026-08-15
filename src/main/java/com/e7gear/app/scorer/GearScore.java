@@ -1,4 +1,4 @@
-package com.e7gear.scorer;
+package com.e7gear.app.scorer;
 
 /**
  * Statistical score produced by GearScorer.

@@ -1,15 +1,15 @@
-package com.e7gear.engine;
+package com.e7gear.app.engine;
 
 import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Quality;
 import com.e7gear.gear.Substat;
-import com.e7gear.role.Role;
-import com.e7gear.role.RoleEvaluation;
-import com.e7gear.role.RoleEvaluator;
-import com.e7gear.role.RoleScore;
-import com.e7gear.scorer.GearScore;
-import com.e7gear.scorer.GearScorer;
+import com.e7gear.app.role.Role;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.role.RoleEvaluator;
+import com.e7gear.app.role.RoleScore;
+import com.e7gear.app.scorer.GearScore;
+import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 
 import java.util.List;

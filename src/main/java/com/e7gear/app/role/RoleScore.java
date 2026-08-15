@@ -1,4 +1,4 @@
-package com.e7gear.role;
+package com.e7gear.app.role;
 
 /**
  * Role-specific suitability with explicit slot/main-stat context.
