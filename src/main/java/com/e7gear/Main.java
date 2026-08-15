@@ -40,7 +40,7 @@ public class Main {
         DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
 
         // --- Prepare output ---
-        Path outputDir = Path.of("output");
+        Path outputDir = Path.of("src/main/resources");
         if (!Files.exists(outputDir)) Files.createDirectories(outputDir);
 
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
