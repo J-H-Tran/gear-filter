@@ -1,11 +1,11 @@
 {
-  "reviewScore": 53.0,
-  "keepScore": 63.0,
+  "reviewScore": 56.0,
+  "keepScore": 64.0,
   "strongCoreStats": 2,
   "reviewCoreStats": 1,
   "highSpeed": 15,
   "rightSidePenalty": 4.0,
-  "openerSpeedThreshold": 15,
+  "openerSpeedThreshold": 16,
   "modGemThreshold": 62.0,
   "modGemMax": {
     "AttackPercent": 7,
@@ -19,5 +19,7 @@
     "PenetrationSet": 1.2,
     "TorrentSet": 1.2,
     "CounterSet": 1.2
-  }
+  },
+  "parallelThreshold": 100,
+  "useCache": true
 }

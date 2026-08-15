@@ -1,9 +1,12 @@
 package com.e7gear.role;
 
+import com.e7gear.app.role.Role;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.role.RoleEvaluator;
 import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
-import com.e7gear.scorer.GearScorer;
+import com.e7gear.app.scorer.GearScorer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

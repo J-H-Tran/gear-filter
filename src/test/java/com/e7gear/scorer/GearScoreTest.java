@@ -1,5 +1,6 @@
 package com.e7gear.scorer;
 
+import com.e7gear.app.scorer.GearScore;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
