@@ -9,12 +9,18 @@
   "openerSpeedThreshold": 16,
   "modGemThreshold": 62.0,
   "modGemMax": {
-    "AttackPercent": 7,
-    "CriticalHitChancePercent": 5,
-    "CriticalHitDamagePercent": 7,
-    "Speed": 4
-  },
-  "setMultipliers": {
+    "AttackPercent": { "85": 8, "88": 9, "90": 9 },
+    "DefensePercent": { "85": 8, "88": 9, "90": 9 },
+    "HealthPercent": { "85": 8, "88": 9, "90": 9 },
+    "EffectivenessPercent": { "85": 8, "88": 9, "90": 9 },
+    "EffectResistancePercent": { "85": 8, "88": 9, "90": 9 },
+    "CriticalHitChancePercent": { "85": 5, "88": 6, "90": 6 },
+    "CriticalHitDamagePercent": { "85": 7, "88": 8, "90": 8 },
+    "Speed": { "85": 4, "88": 5, "90": 5 },
+    "Attack": { "85": 39, "88": 46, "90": 46 },
+    "Defense": { "85": 31, "88": 36, "90": 36 },
+    "Health": { "85": 174, "88": 202, "90": 202 }
+  },  "setMultipliers": {
     "SpeedSet": 1.3,
     "DestructionSet": 1.3,
     "PenetrationSet": 1.2,

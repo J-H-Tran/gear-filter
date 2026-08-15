@@ -19,7 +19,7 @@ public record FilterConfig(
         @JsonProperty(defaultValue = "4.0") double rightSidePenalty,
         @JsonProperty(defaultValue = "15") int openerSpeedThreshold,
 
-        @JsonProperty Map<String, Integer> modGemMax,
+        @JsonProperty Map<String, Map<String, Integer>> modGemMax,
         @JsonProperty Map<String, Double> setMultipliers,
         @JsonProperty(defaultValue = "62.0") double modGemThreshold,
 
@@ -28,7 +28,6 @@ public record FilterConfig(
 ) {
     @JsonCreator
     public FilterConfig {
-        // handle null maps
         if (modGemMax == null) {
             modGemMax = defaultModGemMax();
         }
@@ -46,12 +45,24 @@ public record FilterConfig(
         );
     }
 
-    private static Map<String, Integer> defaultModGemMax() {
-        return Map.of(
-                "AttackPercent", 7,
-                "CriticalHitChancePercent", 5,
-                "CriticalHitDamagePercent", 7,
-                "Speed", 4
+    private static Map<String, Map<String, Integer>> defaultModGemMax() {
+        return Map.ofEntries(
+                // Percentage stats
+                Map.entry("AttackPercent", Map.of("85", 8, "88", 9, "90", 9)),
+                Map.entry("DefensePercent", Map.of("85", 8, "88", 9, "90", 9)),
+                Map.entry("HealthPercent", Map.of("85", 8, "88", 9, "90", 9)),
+                Map.entry("EffectivenessPercent", Map.of("85", 8, "88", 9, "90", 9)),
+                Map.entry("EffectResistancePercent", Map.of("85", 8, "88", 9, "90", 9)),
+
+                // Special stats
+                Map.entry("CriticalHitChancePercent", Map.of("85", 5, "88", 6, "90", 6)),
+                Map.entry("CriticalHitDamagePercent", Map.of("85", 7, "88", 8, "90", 8)),
+                Map.entry("Speed", Map.of("85", 4, "88", 5, "90", 5)),
+
+                // Flat stats
+                Map.entry("Attack", Map.of("85", 39, "88", 46, "90", 46)),
+                Map.entry("Defense", Map.of("85", 31, "88", 36, "90", 36)),
+                Map.entry("Health", Map.of("85", 174, "88", 202, "90", 202))
         );
     }
 

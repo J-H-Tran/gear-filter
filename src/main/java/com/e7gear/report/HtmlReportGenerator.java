@@ -13,6 +13,43 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class HtmlReportGenerator {
+    // ---- Icon mappings (relative to HTML output folder, e.g., "images/") ----
+    private static final Map<String, String> SET_ICON_MAP = Map.ofEntries(
+            Map.entry("AttackSet", "attack-set.png"),
+            Map.entry("SpeedSet", "speed-set.png"),
+            Map.entry("CriticalSet", "crit-set.png"),
+            Map.entry("DestructionSet", "destruction-set.png"),  // matches your filename
+            Map.entry("HitSet", "hit-set.png"),
+            Map.entry("HealthSet", "health-set.png"),
+            Map.entry("DefenseSet", "defense-set.png"),
+            Map.entry("CounterSet", "counter-set.png"),
+            Map.entry("LifestealSet", "lifesteal-set.png"),
+            Map.entry("ImmunitySet", "immunity-set.png"),
+            Map.entry("PenetrationSet", "penetration-set.png"),
+            Map.entry("TorrentSet", "torrent-set.png"),
+            Map.entry("ProtectionSet", "protection-set.png"),
+            Map.entry("ResistSet", "resistance-set.png"),
+            Map.entry("RageSet", "rage-set.png"),
+            Map.entry("RevengeSet", "revenge-set.png"),
+            Map.entry("InjurySet", "injury-set.png"),
+            Map.entry("UnitySet", "unity-set.png")
+    );
+
+    private static final Map<StatType, String> STAT_ICON_MAP = Map.ofEntries(
+            Map.entry(StatType.ATTACK_PERCENT, "patk-stat.png"),
+            Map.entry(StatType.DEFENSE_PERCENT, "pdef-stat.png"),
+            Map.entry(StatType.HEALTH_PERCENT, "php-stat.png"),
+            Map.entry(StatType.CRIT_CHANCE, "critcha-stat.png"),
+            Map.entry(StatType.CRIT_DAMAGE, "critdmg-stat.png"),
+            Map.entry(StatType.EFFECTIVENESS, "eff-stat.png"),
+            Map.entry(StatType.EFFECT_RESISTANCE, "effres-stat.png"),
+            Map.entry(StatType.FLAT_ATTACK, "atk-stat.png"),
+            Map.entry(StatType.FLAT_DEFENSE, "fdef-stat.png"),
+            Map.entry(StatType.FLAT_HEALTH, "fhp-stat.png"),
+            Map.entry(StatType.SPEED, "spd-stat.png")
+    );
+
+    private static final String ICON_IMG_TEMPLATE = "<img src=\"images/%s\" alt=\"%s\" class=\"stat-icon\">";
 
     public static void generate(Path outputPath, List<AnalysisResult> results) throws IOException {
         // Separate +15 items for decision stats
@@ -350,11 +387,16 @@ public final class HtmlReportGenerator {
     private static String rowHtml(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
+        String setIcon = formatSetWithIcon(g.getSet());
+        String mainIcon = g.getMainStatType() != null ? formatStatWithIcon(StatType.fromString(g.getMainStatType())) : "";
+        String mainVal = g.getMainStatValue() != 0 ? String.format("%.0f", g.getMainStatValue()) : "";
+        String substats = formatSubstatsShort(g);
+
         return "      <tr>" +
                 "<td>" + normalizeSlot(g.getGear()) + "</td>" +
-                "<td>" + (g.getSet() != null ? g.getSet().replace("Set", "") : "") + "</td>" +
-                "<td>" + (g.getMainStatType() != null ? abbreviateStat(g.getMainStatType()) : "") + " " + (g.getMainStatValue() != 0 ? g.getMainStatValue() : "") + "</td>" +
-                "<td style=\"font-size:12px;\">" + formatSubstatsShort(g) + "</td>" +
+                "<td>" + setIcon + "</td>" +
+                "<td>" + mainIcon + " " + mainVal + "</td>" +
+                "<td style=\"font-size:12px;\">" + substats + "</td>" +
                 "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
                 "<td><span class=\"badge " + qualityClass(d.quality()) + "\">" + d.quality() + "</span></td>" +
                 "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
@@ -365,10 +407,15 @@ public final class HtmlReportGenerator {
     private static String rowHtmlWithoutSlot(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
+        String setIcon = formatSetWithIcon(g.getSet());
+        String mainIcon = g.getMainStatType() != null ? formatStatWithIcon(StatType.fromString(g.getMainStatType())) : "";
+        String mainVal = g.getMainStatValue() != 0 ? String.format("%.0f", g.getMainStatValue()) : "";
+        String substats = formatSubstatsShort(g);
+
         return "      <tr>" +
-                "<td>" + (g.getSet() != null ? g.getSet().replace("Set", "") : "") + "</td>" +
-                "<td>" + (g.getMainStatType() != null ? abbreviateStat(g.getMainStatType()) : "") + " " + (g.getMainStatValue() != 0 ? g.getMainStatValue() : "") + "</td>" +
-                "<td style=\"font-size:12px;\">" + formatSubstatsShort(g) + "</td>" +
+                "<td>" + setIcon + "</td>" +
+                "<td>" + mainIcon + " " + mainVal + "</td>" +
+                "<td style=\"font-size:12px;\">" + substats + "</td>" +
                 "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
                 "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
                 "</tr>\n";
@@ -378,10 +425,14 @@ public final class HtmlReportGenerator {
     private static String rowHtmlForReforge(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
+        String mainIcon = g.getMainStatType() != null ? formatStatWithIcon(StatType.fromString(g.getMainStatType())) : "";
+        String mainVal = g.getMainStatValue() != 0 ? String.format("%.0f", g.getMainStatValue()) : "";
+        String substats = formatSubstatsShort(g);
+
         return "      <tr>" +
                 "<td>" + normalizeSlot(g.getGear()) + "</td>" +
-                "<td>" + (g.getMainStatType() != null ? abbreviateStat(g.getMainStatType()) : "") + " " + (g.getMainStatValue() != 0 ? g.getMainStatValue() : "") + "</td>" +
-                "<td style=\"font-size:12px;\">" + formatSubstatsShort(g) + "</td>" +
+                "<td>" + mainIcon + " " + mainVal + "</td>" +
+                "<td style=\"font-size:12px;\">" + substats + "</td>" +
                 "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
                 "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
                 "</tr>\n";
@@ -398,21 +449,48 @@ public final class HtmlReportGenerator {
         };
     }
 
-    private static String abbreviateStat(String type) {
-        if (type == null) return "";
-        StatType st = StatType.fromString(type);
-        return st != null ? st.abbreviation() : type;
-    }
-
     private static String formatSubstatsShort(Gear g) {
         if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
         return g.getSubstats().stream()
                 .map(s -> {
                     StatType stat = StatType.fromString(s.getType());
-                    String typeAbbr = stat != null ? stat.abbreviation() : s.getType();
+                    String iconHtml = stat != null ? formatStatWithIcon(stat) : s.getType();
                     String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
-                    return typeAbbr + "=" + val + "(" + s.getRolls() + (s.isModified() ? "★" : "") + ")";
+                    String rolls = s.getRolls() + (s.isModified() ? "★" : "");
+                    return iconHtml + "=" + val + "(" + rolls + ")";
                 })
                 .collect(Collectors.joining(" "));
+    }
+
+    private static String formatSubstatsFull(Gear g) {
+        if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
+        return g.getSubstats().stream()
+                .map(s -> {
+                    StatType stat = StatType.fromString(s.getType());
+                    String iconHtml = stat != null ? formatStatWithIcon(stat) : s.getType();
+                    String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
+                    return iconHtml + " " + val + " (r" + s.getRolls() + (s.isModified() ? "★" : "") + ")";
+                })
+                .collect(Collectors.joining(" "));
+    }
+
+    private static String formatSetWithIcon(String set) {
+        if (set == null) return "";
+        // Remove "Set" suffix for lookup if present
+        String key = set.endsWith("Set") ? set : set + "Set";
+        String iconFile = SET_ICON_MAP.get(key);
+        if (iconFile != null) {
+            return String.format(ICON_IMG_TEMPLATE, iconFile, key.replace("Set", ""));
+        }
+        return key.replace("Set", ""); // fallback to text
+    }
+
+    private static String formatStatWithIcon(StatType stat) {
+        if (stat == null) return "";
+        String iconFile = STAT_ICON_MAP.get(stat);
+        if (iconFile != null) {
+            return String.format(ICON_IMG_TEMPLATE, iconFile, stat.abbreviation());
+        }
+        return stat.abbreviation(); // fallback
     }
 }

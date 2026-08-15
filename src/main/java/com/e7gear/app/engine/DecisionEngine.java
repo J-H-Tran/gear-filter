@@ -12,12 +12,49 @@ import com.e7gear.app.scorer.GearScore;
 import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public final class DecisionEngine {
+
+    // ---- Slot-aware allowed substats (from official substat tables) ----
+    private static final Map<String, Set<StatType>> ALLOWED_SUBSTATS = Map.of(
+            "Weapon", EnumSet.of(
+                    StatType.ATTACK_PERCENT, StatType.HEALTH_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED,
+                    StatType.FLAT_HEALTH
+            ),
+            "Helmet", EnumSet.of(
+                    StatType.HEALTH_PERCENT, StatType.ATTACK_PERCENT, StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED,
+                    StatType.FLAT_ATTACK, StatType.FLAT_DEFENSE
+            ),
+            "Armor", EnumSet.of(
+                    StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED, StatType.FLAT_HEALTH
+            ),
+            "Necklace", EnumSet.of(
+                    StatType.ATTACK_PERCENT, StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED,
+                    StatType.FLAT_ATTACK, StatType.FLAT_HEALTH, StatType.FLAT_DEFENSE
+            ),
+            "Ring", EnumSet.of(
+                    StatType.ATTACK_PERCENT, StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED,
+                    StatType.FLAT_ATTACK, StatType.FLAT_HEALTH, StatType.FLAT_DEFENSE
+            ),
+            "Boots", EnumSet.of(
+                    StatType.ATTACK_PERCENT, StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT,
+                    StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.EFFECTIVENESS,
+                    StatType.EFFECT_RESISTANCE, StatType.SPEED,
+                    StatType.FLAT_ATTACK, StatType.FLAT_HEALTH, StatType.FLAT_DEFENSE
+            )
+    );
 
     private final FilterConfig config;
     private final GearScorer gearScorer;
@@ -80,7 +117,7 @@ public final class DecisionEngine {
             return keep("Spike with coherent role fit", score, roles);
         }
 
-        // 6. Mod-gem potential (salvageable piece)
+        // 6. Mod-gem potential (salvageable piece) – ENHANCED VERSION
         Decision modDecision = checkModGemPotential(gear, score, roles, best);
         if (modDecision != null) {
             return modDecision;
@@ -99,7 +136,7 @@ public final class DecisionEngine {
             }
         }
 
-        // 8. Manual Review Fallbacks (renumbered)
+        // 8. Manual Review Fallbacks
         if (score.score() >= effectiveKeep) {
             return review("High Gear Score but incomplete role signal", score, roles);
         }
@@ -145,7 +182,6 @@ public final class DecisionEngine {
     }
 
     private double getEffectiveReviewScore(Gear gear) {
-        // Keep review threshold unchanged for now
         return config.reviewScore();
     }
 
@@ -156,7 +192,7 @@ public final class DecisionEngine {
     }
 
     private Decision lowQualityDecision(GearScore score, RoleEvaluation roles) {
-        if (score.score() >= getEffectiveReviewScore(null)) { // gear not needed for review threshold
+        if (score.score() >= getEffectiveReviewScore(null)) {
             return review("No role fit but borderline/high Gear Score", score, roles);
         }
         return delete("No role fit and low Gear Score", score, roles);
@@ -192,76 +228,90 @@ public final class DecisionEngine {
                 });
     }
 
-    // ----- Mod-gem potential -----
-
+    // ----- Mod-gem potential (ENHANCED) -----
     private Decision checkModGemPotential(Gear gear, GearScore originalScore, RoleEvaluation roles, RoleScore best) {
         if (best == null || gear.getSubstats() == null || gear.getSubstats().size() < 4) {
             return null;
         }
 
-        // Allow mod-gem if:
-        // - at least 3 useful stats (strong already, just one dead stat), OR
-        // - at least 2 useful stats AND (has a core stat OR slot-compatible)
+        // Ensure the piece has at least 2 useful stats for its best role.
         if (best.usefulStatCount() < 2) {
             return null;
         }
-        if (best.usefulStatCount() < 3 && !best.slotCompatible() && best.coreStatCount() < 1) {
-            return null;
+
+        String slot = normalizeSlot(gear.getGear());
+        Set<StatType> allowedStats = ALLOWED_SUBSTATS.getOrDefault(slot, Collections.emptySet());
+        if (allowedStats.isEmpty()) {
+            return null; // unknown slot
         }
 
-        Set<StatType> roleStats = RoleEvaluator.getRoleStats(best.role());
-        if (roleStats == null || roleStats.isEmpty()) {
-            return null;
-        }
-
-        List<Substat> substats = gear.getSubstats();
-
-        // Find worst substat that is NOT in roleStats (dead stat)
-        Substat worstDead = null;
-        double worstScore = Double.MAX_VALUE;
-        for (Substat sub : substats) {
-            StatType st = StatType.fromString(sub.getType());
-            if (st == null) continue;
-            if (!roleStats.contains(st)) {
-                double statScore = gearScorer.calculateStatScore(st, sub.getValue());
-                if (statScore < worstScore) {
-                    worstScore = statScore;
-                    worstDead = sub;
-                }
-            }
-        }
-
-        if (worstDead == null) {
-            return null; // no dead stat to replace
-        }
-
-        // Determine which role stats are missing
-        Set<StatType> presentStats = substats.stream()
+        // Determine which stats are already present
+        Set<StatType> presentStats = gear.getSubstats().stream()
                 .map(s -> StatType.fromString(s.getType()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        List<StatType> missingStats = roleStats.stream()
-                .filter(st -> !presentStats.contains(st))
+        // Main stat (cannot duplicate)
+        StatType mainStat = gear.getMain() != null ? StatType.fromString(gear.getMain().getType()) : null;
+
+        // Find dead stats: not useful for the best role AND not modified
+        Set<StatType> roleStats = RoleEvaluator.getRoleStats(best.role());
+        List<Substat> deadStats = gear.getSubstats().stream()
+                .filter(s -> {
+                    StatType st = StatType.fromString(s.getType());
+                    return st != null && !roleStats.contains(st) && !s.isModified();
+                })
                 .toList();
 
-        if (missingStats.isEmpty()) {
-            return null; // no meaningful replacement
+        if (deadStats.isEmpty()) {
+            return null;
         }
 
-        double keepThreshold = config.modGemThreshold();  // use dedicated threshold
+        double bestPotentialScore = originalScore.score();
+        Substat bestDead = null;
+        StatType bestReplacement = null;
+        double bestImprovement = 0.0;
 
-        for (StatType replacement : missingStats) {
-            Integer maxGemValue = config.modGemMax().get(replacement.displayName());
-            if (maxGemValue == null) continue;
+        // Try every dead stat with every allowed replacement
+        for (Substat dead : deadStats) {
+            StatType deadType = StatType.fromString(dead.getType());
+            if (deadType == null) continue;
 
-            double newValue = maxGemValue.doubleValue();
-            double potentialScore = computePotentialScore(gear, worstDead, replacement, newValue);
-            if (potentialScore >= keepThreshold) {
-                return new Decision(Quality.KEEP_MOD_CANDIDATE,
-                        String.format("Salvageable with mod: replace %s with %s", worstDead.getType(), replacement.displayName()),
-                        originalScore, roles);
+            for (StatType candidate : allowedStats) {
+                // Skip if already present or same as main stat
+                if (presentStats.contains(candidate) || candidate == mainStat) continue;
+
+                String levelKey = String.valueOf(gear.getLevel());
+                Map<String, Integer> levelMap = config.modGemMax().get(candidate.displayName());
+                if (levelMap == null) continue;
+
+                // Get the max gem value for this stat (from config)
+                Integer maxValue = levelMap.get(levelKey);
+                if (maxValue == null) {
+                    // Fallback: try 90 → 88 → 85
+                    maxValue = levelMap.get("90");
+                    if (maxValue == null) maxValue = levelMap.get("88");
+                    if (maxValue == null) maxValue = levelMap.get("85");
+                    if (maxValue == null) continue;
+                }
+                double potential = computePotentialScore(gear, dead, candidate, maxValue.doubleValue());
+                double improvement = potential - originalScore.score();
+
+                // Only consider if it improves score by at least 2.0 and beats current best
+                if (potential > bestPotentialScore && improvement > 2.0) {
+                    bestPotentialScore = potential;
+                    bestDead = dead;
+                    bestReplacement = candidate;
+                    bestImprovement = improvement;
+                }
             }
+        }
+
+        if (bestDead != null && bestPotentialScore >= config.modGemThreshold()) {
+            return new Decision(Quality.KEEP_MOD_CANDIDATE,
+                    String.format("Salvageable with mod: replace %s with %s (+%.1f score)",
+                            bestDead.getType(), bestReplacement.displayName(), bestImprovement),
+                    originalScore, roles);
         }
 
         return null;
@@ -300,7 +350,7 @@ public final class DecisionEngine {
                 .map(s -> {
                     Substat newS = new Substat();
                     newS.setType(s.getType());
-                    newS.setValue(s.getValue() * 1.2);  // 20% increase
+                    newS.setValue(s.getValue() * 1.2);
                     newS.setRolls(s.getRolls());
                     newS.setModified(s.isModified());
                     return newS;
@@ -309,10 +359,22 @@ public final class DecisionEngine {
 
         Gear tempGear = new Gear();
         tempGear.setSubstats(reforgedSubs);
-        // Main stat isn't affected by reforge, but we need it for RoleEvaluator context.
-        // However, we're only using the GearScore, not the role evaluation.
-        // GearScorer only needs the substats and the main stat isn't used for scoring.
-        // So we can leave main as null.
         return gearScorer.score(tempGear).score();
+    }
+
+    private String normalizeSlot(String slot) {
+        if (slot == null) return "";
+        switch (slot.toLowerCase()) {
+            case "weapon": return "Weapon";
+            case "helmet":
+            case "helm": return "Helmet";
+            case "armor": return "Armor";
+            case "necklace":
+            case "neck": return "Necklace";
+            case "ring": return "Ring";
+            case "boots":
+            case "boot": return "Boots";
+            default: return slot;
+        }
     }
 }
