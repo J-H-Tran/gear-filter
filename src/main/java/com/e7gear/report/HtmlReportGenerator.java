@@ -18,7 +18,7 @@ public final class HtmlReportGenerator {
             Map.entry("AttackSet", "attack-set.png"),
             Map.entry("SpeedSet", "speed-set.png"),
             Map.entry("CriticalSet", "crit-set.png"),
-            Map.entry("DestructionSet", "destruction-set.png"),  // matches your filename
+            Map.entry("DestructionSet", "destruction-set.png"),
             Map.entry("HitSet", "hit-set.png"),
             Map.entry("HealthSet", "health-set.png"),
             Map.entry("DefenseSet", "defense-set.png"),
@@ -32,6 +32,12 @@ public final class HtmlReportGenerator {
             Map.entry("RageSet", "rage-set.png"),
             Map.entry("RevengeSet", "revenge-set.png"),
             Map.entry("InjurySet", "injury-set.png"),
+            Map.entry("ReversalSet", "reversal-set.png"),
+            Map.entry("RiposteSet", "riposte-set.png"),
+            Map.entry("WarfareSet", "warfare-set.png"),
+            Map.entry("PursuitSet", "pursuit-set.png"),
+            Map.entry("WeakeningSet", "weakening-set.png"),
+            Map.entry("FervorSet", "fervor-set.png"),
             Map.entry("UnitySet", "unity-set.png")
     );
 
@@ -47,6 +53,15 @@ public final class HtmlReportGenerator {
             Map.entry(StatType.FLAT_DEFENSE, "fdef-stat.png"),
             Map.entry(StatType.FLAT_HEALTH, "fhp-stat.png"),
             Map.entry(StatType.SPEED, "spd-stat.png")
+    );
+
+    private static final Map<String, String> SLOT_ICON_MAP = Map.of(
+            "Weapon", "weapon-item.png",
+            "Helmet", "helmet-item.png",
+            "Armor", "armor-item.png",
+            "Necklace", "necklace-item.png",
+            "Ring", "ring-item.png",
+            "Boots", "boot-item.png"
     );
 
     private static final String ICON_IMG_TEMPLATE = "<img src=\"images/%s\" alt=\"%s\" class=\"stat-icon\">";
@@ -83,7 +98,7 @@ public final class HtmlReportGenerator {
                         )
                 ));
 
-        // Set breakdown (for +15, by quality)
+        // Set breakdown (for +15, by quality) – keep stripped for chart labels
         Map<String, Map<Quality, Long>> setStats = enhanced.stream()
                 .collect(Collectors.groupingBy(
                         r -> r.gear().getSet() != null ? r.gear().getSet().replace("Set", "") : "Unknown",
@@ -107,11 +122,11 @@ public final class HtmlReportGenerator {
                         )
                 ));
 
-        // ---- REFORGE grouped by set ----
+        // ---- REFORGE grouped by set (use full set name for icon lookup) ----
         Map<String, List<AnalysisResult>> reforgeBySet = enhanced.stream()
                 .filter(r -> r.decision().quality() == Quality.REFORGE_CANDIDATE)
                 .collect(Collectors.groupingBy(
-                        r -> r.gear().getSet() != null ? r.gear().getSet().replace("Set", "") : "Unknown",
+                        r -> r.gear().getSet() != null ? r.gear().getSet() : "Unknown",
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 list -> list.stream()
@@ -133,6 +148,20 @@ public final class HtmlReportGenerator {
         // All +15 items for the main table
         List<AnalysisResult> allEnhancedSorted = enhanced.stream()
                 .sorted(Comparator.comparingDouble(r -> r.decision().gearScore().score()))
+                .toList();
+
+        // --- Collect unique values for filters ---
+        Set<String> uniqueSlots = enhanced.stream()
+                .map(r -> normalizeSlot(r.gear().getGear()))
+                .filter(s -> !s.equals("Unknown"))
+                .collect(Collectors.toCollection(TreeSet::new));
+        Set<String> uniqueSets = enhanced.stream()
+                .map(r -> r.gear().getSet() != null ? r.gear().getSet().replace("Set", "") : "Unknown")
+                .filter(s -> !s.equals("Unknown"))
+                .collect(Collectors.toCollection(TreeSet::new));
+        List<String> qualityOptions = Arrays.stream(Quality.values())
+                .filter(q -> q != Quality.UNENHANCED)
+                .map(Enum::name)
                 .toList();
 
         // Build HTML
@@ -176,6 +205,57 @@ public final class HtmlReportGenerator {
         html.append("    .badge.unenhanced { background: #8b949e33; color: #8b949e; border: 1px solid #8b949e66; }\n");
         html.append("    .table-wrap { max-height: 400px; overflow-y: auto; margin-bottom: 16px; }\n");
         html.append("    @media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }\n");
+        html.append("    .stat-icon {\n");
+        html.append("      width: 25px;\n");
+        html.append("      height: 25px;\n");
+        html.append("      vertical-align: middle;\n");
+        html.append("      margin-right: 2px;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar {\n");
+        html.append("      display: flex;\n");
+        html.append("      flex-wrap: wrap;\n");
+        html.append("      gap: 10px;\n");
+        html.append("      background: #161b22;\n");
+        html.append("      border: 1px solid #30363d;\n");
+        html.append("      border-radius: 8px;\n");
+        html.append("      padding: 16px;\n");
+        html.append("      margin-bottom: 16px;\n");
+        html.append("      align-items: center;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar select, .filter-bar input {\n");
+        html.append("      background: #0d1117;\n");
+        html.append("      color: #c9d1d9;\n");
+        html.append("      border: 1px solid #30363d;\n");
+        html.append("      border-radius: 4px;\n");
+        html.append("      padding: 4px 8px;\n");
+        html.append("      font-size: 13px;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar label {\n");
+        html.append("      font-size: 13px;\n");
+        html.append("      color: #8b949e;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar .reset-btn {\n");
+        html.append("      background: #21262d;\n");
+        html.append("      border: 1px solid #30363d;\n");
+        html.append("      color: #c9d1d9;\n");
+        html.append("      padding: 4px 12px;\n");
+        html.append("      border-radius: 4px;\n");
+        html.append("      cursor: pointer;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar .reset-btn:hover {\n");
+        html.append("      background: #30363d;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar input[type=\"number\"] {\n");
+        html.append("      width: 60px;\n");
+        html.append("    }\n");
+        html.append("    .filter-bar .substat-search {\n");
+        html.append("      width: 150px;\n");
+        html.append("    }\n");
+        html.append("    .no-results {\n");
+        html.append("      color: #8b949e;\n");
+        html.append("      text-align: center;\n");
+        html.append("      padding: 20px;\n");
+        html.append("    }\n");
         html.append("  </style>\n");
         html.append("</head>\n");
         html.append("<body>\n");
@@ -220,7 +300,8 @@ public final class HtmlReportGenerator {
             List<AnalysisResult> slotDeletes = deleteBySlot.getOrDefault(slot, List.of());
             if (slotDeletes.isEmpty()) continue;
             hasDeletes = true;
-            html.append("  <h3>⚔️ ").append(slot).append("</h3>\n");
+            // Header with slot icon
+            html.append("  <h3>⚔️ ").append(formatSlotWithIcon(slot)).append("</h3>\n");
             html.append("  <div class=\"table-wrap\">\n");
             html.append("    <table>\n");
             html.append("      <thead><tr><th>Set</th><th>Main</th><th>Substats</th><th>Score</th><th>Reason</th></tr></thead>\n");
@@ -236,15 +317,20 @@ public final class HtmlReportGenerator {
             html.append("  <p style=\"color:#8b949e;\">No DELETE_CANDIDATE items found.</p>\n");
         }
 
-        // ---- REFORGE tables grouped by set ----
+        // ---- REFORGE tables grouped by set (full set name used as key) ----
         html.append("  <h2>🔧 Top REFORGE_CANDIDATE by Set (Lowest Current Score, Reforge makes them viable)</h2>\n");
         boolean hasReforges = false;
-        List<String> setOrder = reforgeBySet.keySet().stream().sorted().toList();
-        for (String set : setOrder) {
-            List<AnalysisResult> setReforges = reforgeBySet.get(set);
+        // Sort by the stripped set name for readability
+        List<String> fullSetOrder = reforgeBySet.keySet().stream()
+                .sorted(Comparator.comparing(s -> s.replace("Set", "")))
+                .toList();
+        for (String fullSet : fullSetOrder) {
+            List<AnalysisResult> setReforges = reforgeBySet.get(fullSet);
             if (setReforges.isEmpty()) continue;
             hasReforges = true;
-            html.append("  <h3>⚡ ").append(set).append("</h3>\n");
+            // Header with set icon
+            String stripped = fullSet.replace("Set", "");
+            html.append("  <h3>⚡ ").append(formatSetWithIcon(fullSet)).append("</h3>\n");
             html.append("  <div class=\"table-wrap\">\n");
             html.append("    <table>\n");
             html.append("      <thead><tr><th>Slot</th><th>Main</th><th>Substats</th><th>Current Score</th><th>Reason</th></tr></thead>\n");
@@ -276,12 +362,48 @@ public final class HtmlReportGenerator {
         html.append("    </table>\n");
         html.append("  </div>\n");
 
-        // ---- All +15 items ----
+        // ---- All +15 items with filter bar ----
         html.append("  <h2>📊 All +15 Items (sorted by Score ascending)</h2>\n");
+
+        // ---- Filter Bar ----
+        html.append("  <div class=\"filter-bar\" id=\"filterBar\">\n");
+        html.append("    <label>Quality:</label>\n");
+        html.append("    <select id=\"filterQuality\"><option value=\"\">All</option>");
+        for (String q : qualityOptions) {
+            html.append("<option value=\"").append(q).append("\">").append(q).append("</option>");
+        }
+        html.append("    </select>\n");
+
+        html.append("    <label>Slot:</label>\n");
+        html.append("    <select id=\"filterSlot\"><option value=\"\">All</option>");
+        for (String s : uniqueSlots) {
+            html.append("<option value=\"").append(s).append("\">").append(s).append("</option>");
+        }
+        html.append("    </select>\n");
+
+        html.append("    <label>Set:</label>\n");
+        html.append("    <select id=\"filterSet\"><option value=\"\">All</option>");
+        for (String s : uniqueSets) {
+            html.append("<option value=\"").append(s).append("\">").append(s).append("</option>");
+        }
+        html.append("    </select>\n");
+
+        html.append("    <label>Min Score:</label>\n");
+        html.append("    <input type=\"number\" id=\"filterMinScore\" min=\"0\" step=\"0.1\" placeholder=\"0\">\n");
+        html.append("    <label>Max Score:</label>\n");
+        html.append("    <input type=\"number\" id=\"filterMaxScore\" min=\"0\" step=\"0.1\" placeholder=\"999\">\n");
+
+        html.append("    <label>Substat search:</label>\n");
+        html.append("    <input type=\"text\" id=\"filterSubstat\" class=\"substat-search\" placeholder=\"e.g. Speed\">\n");
+
+        html.append("    <button class=\"reset-btn\" id=\"resetFilters\">Reset Filters</button>\n");
+        html.append("  </div>\n");
+
+        // ---- Table ----
         html.append("  <div class=\"table-wrap\" style=\"max-height:600px;\">\n");
-        html.append("    <table>\n");
+        html.append("    <table id=\"allItemsTable\">\n");
         html.append("      <thead><tr><th>Slot</th><th>Set</th><th>Main</th><th>Substats</th><th>Score</th><th>Quality</th><th>Reason</th></tr></thead>\n");
-        html.append("      <tbody>\n");
+        html.append("      <tbody id=\"allItemsBody\">\n");
         for (AnalysisResult r : allEnhancedSorted) {
             html.append(rowHtml(r));
         }
@@ -291,9 +413,9 @@ public final class HtmlReportGenerator {
 
         html.append("</div>\n");
 
-        // ---- JavaScript for Charts ----
+        // ---- JavaScript for Charts & Filtering ----
         html.append("<script>\n");
-        // Quality chart (include REFORGE_CANDIDATE)
+        // Quality chart
         html.append("const qualityCtx = document.getElementById('qualityChart').getContext('2d');\n");
         html.append("new Chart(qualityCtx, {\n");
         html.append("  type: 'doughnut',\n");
@@ -351,6 +473,76 @@ public final class HtmlReportGenerator {
         html.append("  },\n");
         html.append("  options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#c9d1d9' } } }, scales: { x: { ticks: { color: '#8b949e' } }, y: { ticks: { color: '#8b949e', stepSize: 1 } } } }\n");
         html.append("});\n");
+
+        // ---- Filtering Logic ----
+        html.append("(function() {\n");
+        html.append("  const rows = document.querySelectorAll('#allItemsBody tr');\n");
+        html.append("  const qualityFilter = document.getElementById('filterQuality');\n");
+        html.append("  const slotFilter = document.getElementById('filterSlot');\n");
+        html.append("  const setFilter = document.getElementById('filterSet');\n");
+        html.append("  const minScoreFilter = document.getElementById('filterMinScore');\n");
+        html.append("  const maxScoreFilter = document.getElementById('filterMaxScore');\n");
+        html.append("  const substatFilter = document.getElementById('filterSubstat');\n");
+        html.append("  const resetBtn = document.getElementById('resetFilters');\n");
+        html.append("\n");
+        html.append("  function filterRows() {\n");
+        html.append("    const quality = qualityFilter.value;\n");
+        html.append("    const slot = slotFilter.value;\n");
+        html.append("    const setVal = setFilter.value;\n");
+        html.append("    const minScore = parseFloat(minScoreFilter.value) || 0;\n");
+        html.append("    const maxScore = parseFloat(maxScoreFilter.value) || 999;\n");
+        html.append("    const substat = substatFilter.value.toLowerCase();\n");
+        html.append("\n");
+        html.append("    let visibleCount = 0;\n");
+        html.append("    rows.forEach(row => {\n");
+        html.append("      const rowQuality = row.dataset.quality || '';\n");
+        html.append("      const rowSlot = row.dataset.slot || '';\n");
+        html.append("      const rowSet = row.dataset.set || '';\n");
+        html.append("      const rowScore = parseFloat(row.dataset.score) || 0;\n");
+        html.append("      const rowSubstats = row.dataset.substats || '';\n");
+        html.append("\n");
+        html.append("      let show = true;\n");
+        html.append("      if (quality && rowQuality !== quality) show = false;\n");
+        html.append("      if (slot && rowSlot !== slot) show = false;\n");
+        html.append("      if (setVal && rowSet !== setVal) show = false;\n");
+        html.append("      if (rowScore < minScore || rowScore > maxScore) show = false;\n");
+        html.append("      if (substat && !rowSubstats.toLowerCase().includes(substat)) show = false;\n");
+        html.append("\n");
+        html.append("      row.style.display = show ? '' : 'none';\n");
+        html.append("      if (show) visibleCount++;\n");
+        html.append("    });\n");
+        html.append("\n");
+        html.append("    let noResults = document.getElementById('noResultsMessage');\n");
+        html.append("    if (!noResults) {\n");
+        html.append("      noResults = document.createElement('tr');\n");
+        html.append("      noResults.id = 'noResultsMessage';\n");
+        html.append("      noResults.innerHTML = '<td colspan=\"7\" class=\"no-results\">No items match the filters.</td>';\n");
+        html.append("      document.getElementById('allItemsBody').appendChild(noResults);\n");
+        html.append("    }\n");
+        html.append("    if (visibleCount === 0) {\n");
+        html.append("      noResults.style.display = '';\n");
+        html.append("    } else {\n");
+        html.append("      noResults.style.display = 'none';\n");
+        html.append("    }\n");
+        html.append("  }\n");
+        html.append("\n");
+        html.append("  qualityFilter.addEventListener('change', filterRows);\n");
+        html.append("  slotFilter.addEventListener('change', filterRows);\n");
+        html.append("  setFilter.addEventListener('change', filterRows);\n");
+        html.append("  minScoreFilter.addEventListener('input', filterRows);\n");
+        html.append("  maxScoreFilter.addEventListener('input', filterRows);\n");
+        html.append("  substatFilter.addEventListener('input', filterRows);\n");
+        html.append("\n");
+        html.append("  resetBtn.addEventListener('click', function() {\n");
+        html.append("    qualityFilter.value = '';\n");
+        html.append("    slotFilter.value = '';\n");
+        html.append("    setFilter.value = '';\n");
+        html.append("    minScoreFilter.value = '';\n");
+        html.append("    maxScoreFilter.value = '';\n");
+        html.append("    substatFilter.value = '';\n");
+        html.append("    filterRows();\n");
+        html.append("  });\n");
+        html.append("})();\n");
         html.append("</script>\n");
         html.append("</body>\n");
         html.append("</html>");
@@ -383,6 +575,15 @@ public final class HtmlReportGenerator {
         };
     }
 
+    private static String formatSlotWithIcon(String slot) {
+        if (slot == null || slot.equals("Unknown")) return slot;
+        String iconFile = SLOT_ICON_MAP.get(slot);
+        if (iconFile != null) {
+            return String.format(ICON_IMG_TEMPLATE, iconFile, slot);
+        }
+        return slot;
+    }
+
     // Row with Slot column (used for REVIEW and ALL tables)
     private static String rowHtml(AnalysisResult r) {
         Gear g = r.gear();
@@ -391,14 +592,19 @@ public final class HtmlReportGenerator {
         String mainIcon = g.getMainStatType() != null ? formatStatWithIcon(StatType.fromString(g.getMainStatType())) : "";
         String mainVal = g.getMainStatValue() != 0 ? String.format("%.0f", g.getMainStatValue()) : "";
         String substats = formatSubstatsShort(g);
+        String quality = d.quality().name();
+        String slot = normalizeSlot(g.getGear());
+        String set = g.getSet() != null ? g.getSet().replace("Set", "") : "";
+        double score = d.gearScore().score();
+        String slotIcon = formatSlotWithIcon(slot);
 
-        return "      <tr>" +
-                "<td>" + normalizeSlot(g.getGear()) + "</td>" +
+        return "      <tr data-quality=\"" + quality + "\" data-slot=\"" + slot + "\" data-set=\"" + set + "\" data-score=\"" + score + "\" data-substats=\"" + escapeAttr(stripHtml(substats)) + "\">" +
+                "<td>" + slotIcon + "</td>" +
                 "<td>" + setIcon + "</td>" +
                 "<td>" + mainIcon + " " + mainVal + "</td>" +
                 "<td style=\"font-size:12px;\">" + substats + "</td>" +
-                "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
-                "<td><span class=\"badge " + qualityClass(d.quality()) + "\">" + d.quality() + "</span></td>" +
+                "<td>" + String.format("%.1f", score) + "</td>" +
+                "<td><span class=\"badge " + qualityClass(d.quality()) + "\">" + quality + "</span></td>" +
                 "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
                 "</tr>\n";
     }
@@ -425,12 +631,14 @@ public final class HtmlReportGenerator {
     private static String rowHtmlForReforge(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
+        String slot = normalizeSlot(g.getGear());
+        String slotIcon = formatSlotWithIcon(slot);
         String mainIcon = g.getMainStatType() != null ? formatStatWithIcon(StatType.fromString(g.getMainStatType())) : "";
         String mainVal = g.getMainStatValue() != 0 ? String.format("%.0f", g.getMainStatValue()) : "";
         String substats = formatSubstatsShort(g);
 
         return "      <tr>" +
-                "<td>" + normalizeSlot(g.getGear()) + "</td>" +
+                "<td>" + slotIcon + "</td>" +
                 "<td>" + mainIcon + " " + mainVal + "</td>" +
                 "<td style=\"font-size:12px;\">" + substats + "</td>" +
                 "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
@@ -462,21 +670,9 @@ public final class HtmlReportGenerator {
                 .collect(Collectors.joining(" "));
     }
 
-    private static String formatSubstatsFull(Gear g) {
-        if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
-        return g.getSubstats().stream()
-                .map(s -> {
-                    StatType stat = StatType.fromString(s.getType());
-                    String iconHtml = stat != null ? formatStatWithIcon(stat) : s.getType();
-                    String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
-                    return iconHtml + " " + val + " (r" + s.getRolls() + (s.isModified() ? "★" : "") + ")";
-                })
-                .collect(Collectors.joining(" "));
-    }
-
     private static String formatSetWithIcon(String set) {
         if (set == null) return "";
-        // Remove "Set" suffix for lookup if present
+        // If it doesn't end with "Set", assume it's already stripped; we need the full name for lookup
         String key = set.endsWith("Set") ? set : set + "Set";
         String iconFile = SET_ICON_MAP.get(key);
         if (iconFile != null) {
@@ -492,5 +688,15 @@ public final class HtmlReportGenerator {
             return String.format(ICON_IMG_TEMPLATE, iconFile, stat.abbreviation());
         }
         return stat.abbreviation(); // fallback
+    }
+
+    private static String stripHtml(String html) {
+        if (html == null) return "";
+        return html.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    private static String escapeAttr(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "&quot;");
     }
 }
