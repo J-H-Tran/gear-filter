@@ -1,11 +1,12 @@
 {
-  "reviewScore": 58.0,
-  "keepScore": 66.0,
+  "reviewScore": 53.0,
+  "keepScore": 63.0,
   "strongCoreStats": 2,
   "reviewCoreStats": 1,
   "highSpeed": 15,
   "rightSidePenalty": 4.0,
-  "openerSpeedThreshold": 17,
+  "openerSpeedThreshold": 15,
+  "modGemThreshold": 62.0,
   "modGemMax": {
     "AttackPercent": 7,
     "CriticalHitChancePercent": 5,

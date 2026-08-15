@@ -236,7 +236,8 @@ public final class DecisionEngine {
             return null; // no meaningful replacement
         }
 
-        double keepThreshold = getEffectiveKeepScore(gear, best);
+        double keepThreshold = config.modGemThreshold();  // use dedicated threshold
+
         for (StatType replacement : missingStats) {
             Integer maxGemValue = config.modGemMax().get(replacement.displayName());
             if (maxGemValue == null) continue;

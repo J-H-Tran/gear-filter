@@ -19,7 +19,11 @@ public record FilterConfig(
         @JsonProperty(defaultValue = "17") int openerSpeedThreshold,
 
         @JsonProperty Map<String, Integer> modGemMax,
-        @JsonProperty Map<String, Double> setMultipliers
+        @JsonProperty Map<String, Double> setMultipliers,
+        @JsonProperty(defaultValue = "60.0") double modGemThreshold,
+
+        @JsonProperty(defaultValue = "100") int parallelThreshold,
+        @JsonProperty(defaultValue = "true") boolean useCache
 ) {
     @JsonCreator
     public FilterConfig {
@@ -36,7 +40,8 @@ public record FilterConfig(
         return new FilterConfig(
                 58.0, 66.0, 2, 1, 15, 4.0, 17,
                 defaultModGemMax(),
-                defaultSetMultipliers()
+                defaultSetMultipliers(),
+                60.0, 100, true
         );
     }
 

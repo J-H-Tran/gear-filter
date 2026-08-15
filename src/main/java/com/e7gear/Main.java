@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +38,22 @@ public class Main {
         RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer, config);
         DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
 
+        // --- Prepare output ---
+        Path outputDir = Path.of("output");
+        if (!Files.exists(outputDir)) Files.createDirectories(outputDir);
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+
         Path inputPath = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
-        Path outputPath = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
+        Path outputPath = args.length > 1 ? Path.of(args[1]) : outputDir.resolve("gear-analysis-" + timestamp + ".csv");
+
+        // Backup config used
+        Path configBackup = outputDir.resolve("filter-config-" + timestamp + ".json");
+        Files.writeString(configBackup, new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(config));
 
         System.out.println("E7 Gear Inventory Analysis");
         System.out.println("==========================");
+        System.out.println("Config: " + configBackup.toAbsolutePath());
 
         // 1. Load gear.txt
         String json = Files.readString(inputPath);
@@ -65,7 +78,7 @@ public class Main {
                 })
                 .toList();
 
-        // 4. Print summary (including KEEP_MOD_CANDIDATE)
+        // 4. Print summary
         Map<Quality, Long> qualityCounts = results.stream()
                 .collect(Collectors.groupingBy(
                         result -> result.decision().quality(),

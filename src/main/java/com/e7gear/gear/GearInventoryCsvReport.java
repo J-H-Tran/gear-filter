@@ -16,6 +16,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,12 +35,23 @@ public final class GearInventoryCsvReport {
     public static void main(String[] args) throws Exception {
         // --- Load config ---
         FilterConfig config = ConfigLoader.load();
+
+        // --- Prepare output ---
+        Path outputDir = Path.of("output");
+        if (!Files.exists(outputDir)) Files.createDirectories(outputDir);
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+
+        Path input = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
+        Path output = args.length > 1 ? Path.of(args[1]) : outputDir.resolve("gear-analysis-" + timestamp + ".csv");
+
+        // Backup config
+        Path configBackup = outputDir.resolve("filter-config-" + timestamp + ".json");
+        Files.writeString(configBackup, new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(config));
+
         GearScorer gearScorer = new GearScorer();
         RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer, config);
         DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
-
-        Path input = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
-        Path output = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
 
         ObjectMapper mapper = new ObjectMapper();
         GearInventory inventory = mapper.readValue(input.toFile(), GearInventory.class);
@@ -88,6 +101,7 @@ public final class GearInventoryCsvReport {
         System.out.println("Inventory: " + inventory.getItems().size());
         System.out.println("+15: " + inventory.getItems().stream().filter(g -> g.getEnhance() == 15).count());
         System.out.println("CSV: " + output.toAbsolutePath());
+        System.out.println("Config: " + configBackup.toAbsolutePath());
     }
 
     // Use abbreviated stat names in CSV for consistency (optional but recommended)
