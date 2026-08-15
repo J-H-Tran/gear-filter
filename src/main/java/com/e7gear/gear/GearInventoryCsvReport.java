@@ -1,5 +1,7 @@
 package com.e7gear.gear;
 
+import com.e7gear.config.ConfigLoader;
+import com.e7gear.config.FilterConfig;
 import com.e7gear.engine.Decision;
 import com.e7gear.engine.DecisionEngine;
 import com.e7gear.role.Role;
@@ -16,10 +18,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Runs the complete scoring/evaluation/decision pipeline against gear.txt
- * and writes one row per inventory item.
- */
 public final class GearInventoryCsvReport {
 
     private static final String HEADER = String.join(",",
@@ -32,6 +30,9 @@ public final class GearInventoryCsvReport {
     );
 
     public static void main(String[] args) throws Exception {
+        // --- Load config ---
+        FilterConfig config = ConfigLoader.load();
+
         Path input = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
         Path output = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
 
@@ -40,7 +41,7 @@ public final class GearInventoryCsvReport {
 
         GearScorer scorer = new GearScorer();
         RoleEvaluator roleEvaluator = new RoleEvaluator(scorer);
-        DecisionEngine decisionEngine = new DecisionEngine();
+        DecisionEngine decisionEngine = new DecisionEngine(config);
 
         try (BufferedWriter writer = Files.newBufferedWriter(output)) {
             writer.write(HEADER);
@@ -49,7 +50,7 @@ public final class GearInventoryCsvReport {
             for (Gear gear : inventory.getItems()) {
                 GearScore score = scorer.score(gear);
                 RoleEvaluation roles = roleEvaluator.evaluate(gear);
-                Decision decision = decisionEngine.decide(gear);
+                Decision decision = decisionEngine.decide(gear, score, roles);
 
                 RoleScore best = roles.bestRole() == Role.NONE
                         ? null

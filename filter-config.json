@@ -1,0 +1,22 @@
+{
+  "reviewScore": 58.0,
+  "keepScore": 66.0,
+  "strongCoreStats": 2,
+  "reviewCoreStats": 1,
+  "highSpeed": 15,
+  "rightSidePenalty": 4.0,
+  "openerSpeedThreshold": 17,
+  "modGemMax": {
+    "AttackPercent": 7,
+    "CriticalHitChancePercent": 5,
+    "CriticalHitDamagePercent": 7,
+    "Speed": 4
+  },
+  "setMultipliers": {
+    "SpeedSet": 1.3,
+    "DestructionSet": 1.3,
+    "PenetrationSet": 1.2,
+    "TorrentSet": 1.2,
+    "CounterSet": 1.2
+  }
+}

@@ -1,5 +1,7 @@
 package com.e7gear;
 
+import com.e7gear.config.ConfigLoader;
+import com.e7gear.config.FilterConfig;
 import com.e7gear.engine.Decision;
 import com.e7gear.engine.DecisionEngine;
 import com.e7gear.gear.Gear;
@@ -25,6 +27,9 @@ import java.util.stream.Collectors;
 public class Main {
 
     public static void main(String[] args) throws IOException {
+        // --- Load configuration ---
+        FilterConfig config = ConfigLoader.load();
+
         Path inputPath = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
         Path outputPath = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
 
@@ -47,18 +52,17 @@ public class Main {
         GearScorer gearScorer = new GearScorer();
 
         // 4. RoleEvaluator
-        RoleEvaluator roleEvaluator = new RoleEvaluator();
+        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
 
-        // 5. DecisionEngine
-        DecisionEngine decisionEngine = new DecisionEngine();
+        // 5. DecisionEngine with config
+        DecisionEngine decisionEngine = new DecisionEngine(config);
 
         List<AnalysisResult> results = items.stream()
                 .filter(gear -> gear.getEnhance() == 15)
                 .map(gear -> {
                     GearScore gearScore = gearScorer.score(gear);
                     RoleEvaluation roleEvaluation = roleEvaluator.evaluate(gear);
-                    Decision decision = decisionEngine.decide(
-                            gear, gearScore, roleEvaluation);
+                    Decision decision = decisionEngine.decide(gear, gearScore, roleEvaluation);
                     return new AnalysisResult(gear, decision);
                 })
                 .toList();
@@ -83,6 +87,7 @@ public class Main {
         System.out.println("CSV: " + outputPath.toAbsolutePath());
     }
 
+    // CSV writing and formatting (unchanged)
     private static void writeCsv(
             Path outputPath,
             List<AnalysisResult> results
