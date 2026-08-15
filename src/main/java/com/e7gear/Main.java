@@ -1,19 +1,20 @@
 package com.e7gear;
 
+import com.e7gear.app.engine.Decision;
+import com.e7gear.app.engine.DecisionEngine;
+import com.e7gear.app.role.Role;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.role.RoleEvaluator;
+import com.e7gear.app.role.RoleScore;
+import com.e7gear.app.scorer.GearScore;
+import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.config.ConfigLoader;
 import com.e7gear.config.FilterConfig;
-import com.e7gear.engine.Decision;
-import com.e7gear.engine.DecisionEngine;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.GearInventory;
 import com.e7gear.gear.Quality;
 import com.e7gear.gear.Substat;
-import com.e7gear.role.Role;
-import com.e7gear.role.RoleEvaluation;
-import com.e7gear.role.RoleEvaluator;
-import com.e7gear.role.RoleScore;
-import com.e7gear.scorer.GearScore;
-import com.e7gear.scorer.GearScorer;
+import com.e7gear.report.HtmlReportGenerator;
 import com.e7gear.stats.StatType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -61,42 +62,54 @@ public class Main {
         // 2. Deserialize GearInventory
         ObjectMapper mapper = new ObjectMapper();
         GearInventory inventory = mapper.readValue(json, GearInventory.class);
-        List<Gear> items = inventory.getItems();
+        List<Gear> allItems = inventory.getItems();
 
-        if (items == null) {
+        if (allItems == null) {
             throw new IllegalStateException("Gear inventory contains no items");
         }
 
-        // 3. Process +15 items
-        List<AnalysisResult> results = items.stream()
-                .filter(gear -> gear.getEnhance() == 15)
+        // Process ALL items
+        List<AnalysisResult> allResults = allItems.stream()
                 .map(gear -> {
-                    GearScore gearScore = gearScorer.score(gear);
-                    RoleEvaluation roleEvaluation = roleEvaluator.evaluate(gear);
-                    Decision decision = decisionEngine.decide(gear, gearScore, roleEvaluation);
+                    GearScore score = gearScorer.score(gear);
+                    RoleEvaluation role = roleEvaluator.evaluate(gear);
+                    Decision decision;
+                    if (gear.getEnhance() == 15) {
+                        decision = decisionEngine.decide(gear, score, role);
+                    } else {
+                        decision = new Decision(Quality.UNENHANCED, "Not +15", score, role);
+                    }
                     return new AnalysisResult(gear, decision);
                 })
                 .toList();
 
-        // 4. Print summary
-        Map<Quality, Long> qualityCounts = results.stream()
+        // Separate +15 for summary stats
+        List<AnalysisResult> enhancedResults = allResults.stream()
+                .filter(r -> r.gear().getEnhance() == 15)
+                .toList();
+
+        // Print summary (only for +15)
+        Map<Quality, Long> qualityCounts = enhancedResults.stream()
                 .collect(Collectors.groupingBy(
-                        result -> result.decision().quality(),
+                        r -> r.decision().quality(),
                         Collectors.counting()
                 ));
 
-        System.out.println("Inventory: " + items.size());
-        System.out.println("+15: " + results.size());
+        System.out.println("Total items: " + allItems.size());
+        System.out.println("+15 items: " + enhancedResults.size());
         System.out.println("KEEP: " + qualityCounts.getOrDefault(Quality.KEEP, 0L));
         System.out.println("KEEP_MOD_CANDIDATE: " + qualityCounts.getOrDefault(Quality.KEEP_MOD_CANDIDATE, 0L));
         System.out.println("REVIEW: " + qualityCounts.getOrDefault(Quality.REVIEW, 0L));
-        System.out.println("DELETE_CANDIDATE: "
-                + qualityCounts.getOrDefault(Quality.DELETE_CANDIDATE, 0L));
+        System.out.println("DELETE_CANDIDATE: " + qualityCounts.getOrDefault(Quality.DELETE_CANDIDATE, 0L));
 
-        // 5. Write CSV report
-        writeCsv(outputPath, results);
+        // Write CSV (optional, keep it)
+        writeCsv(outputPath, enhancedResults);
 
-        System.out.println("CSV: " + outputPath.toAbsolutePath());
+        // NEW: Generate HTML report for ALL items
+        Path htmlPath = outputDir.resolve("gear-report-" + timestamp + ".html");
+        HtmlReportGenerator.generate(htmlPath, allResults);
+
+        System.out.println("HTML report: " + htmlPath.toAbsolutePath());
     }
 
     // ---------- CSV writing ----------
@@ -104,13 +117,13 @@ public class Main {
         StringBuilder csv = new StringBuilder();
 
         csv.append(String.join(",",
-                "id", "ingameId", "gear", "type", "set", "rank", "level", "enhance",
+                "ingameId", "gear", "set", "rank", "level", "enhance",
                 "mainStatType", "mainStatValue", "substats",
                 "gearScore", "dScore", "sScore", "cScore",
-                "maxEnhancementRolls", "totalEnhancementRolls", "hasSpike", "hasModified",
-                "bestRole", "usefulStatCount", "slotPreferredStatCount", "mainStatPreferred",
+                "maxEnhancementRolls", "hasModified",
+                "bestRole", "slotPreferredStatCount", "mainStatPreferred",
                 "quality", "reason"
-        )).append('\n');
+        ));
 
         for (AnalysisResult result : results) {
             Gear gear = result.gear();
@@ -122,10 +135,8 @@ public class Main {
             GearScore score = decision.gearScore();
 
             csv.append(csvRow(
-                    gear.getId(),
                     gear.getIngameId(),
                     gear.getGear(),
-                    gear.getType(),
                     gear.getSet(),
                     gear.getRank(),
                     gear.getLevel(),
@@ -138,11 +149,8 @@ public class Main {
                     score.sScore(),
                     score.cScore(),
                     score.maxEnhancementRolls(),
-                    score.totalEnhancementRolls(),
-                    score.hasSpike(),
                     score.hasModified(),
                     role.bestRole(),
-                    bestRole == null ? 0 : bestRole.usefulStatCount(),
                     bestRole == null ? 0 : bestRole.slotPreferredStatCount(),
                     bestRole != null && bestRole.mainStatPreferred(),
                     decision.quality(),
@@ -194,5 +202,5 @@ public class Main {
         return st == null ? type : st.abbreviation();
     }
 
-    private record AnalysisResult(Gear gear, Decision decision) {}
+    public record AnalysisResult(Gear gear, Decision decision) {}
 }

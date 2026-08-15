@@ -1,15 +1,18 @@
-package com.e7gear.gear;
+package com.e7gear.report;
 
 import com.e7gear.config.ConfigLoader;
 import com.e7gear.config.FilterConfig;
-import com.e7gear.engine.Decision;
-import com.e7gear.engine.DecisionEngine;
-import com.e7gear.role.Role;
-import com.e7gear.role.RoleEvaluation;
-import com.e7gear.role.RoleEvaluator;
-import com.e7gear.role.RoleScore;
-import com.e7gear.scorer.GearScore;
-import com.e7gear.scorer.GearScorer;
+import com.e7gear.app.engine.Decision;
+import com.e7gear.app.engine.DecisionEngine;
+import com.e7gear.gear.Gear;
+import com.e7gear.gear.GearInventory;
+import com.e7gear.gear.Substat;
+import com.e7gear.app.role.Role;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.role.RoleEvaluator;
+import com.e7gear.app.role.RoleScore;
+import com.e7gear.app.scorer.GearScore;
+import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

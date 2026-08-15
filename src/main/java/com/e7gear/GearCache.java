@@ -1,7 +1,7 @@
 package com.e7gear;
 
-import com.e7gear.role.RoleEvaluation;
-import com.e7gear.scorer.GearScore;
+import com.e7gear.app.role.RoleEvaluation;
+import com.e7gear.app.scorer.GearScore;
 
 import java.util.concurrent.ConcurrentHashMap;
 

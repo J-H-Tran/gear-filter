@@ -4,5 +4,6 @@ public enum Quality {
     KEEP,
     KEEP_MOD_CANDIDATE,
     REVIEW,
-    DELETE_CANDIDATE
+    DELETE_CANDIDATE,
+    UNENHANCED
 }
