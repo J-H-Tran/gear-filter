@@ -10,17 +10,18 @@ import java.util.Map;
  * Loaded from filter-config.json (or uses defaults).
  */
 public record FilterConfig(
-        @JsonProperty(defaultValue = "58.0") double reviewScore,
-        @JsonProperty(defaultValue = "66.0") double keepScore,
+        @JsonProperty(defaultValue = "56.0") double reviewScore,
+        @JsonProperty(defaultValue = "64.0") double keepScore,
+        @JsonProperty(defaultValue = "64.0") double reforgeThreshold,
         @JsonProperty(defaultValue = "2") int strongCoreStats,
         @JsonProperty(defaultValue = "1") int reviewCoreStats,
         @JsonProperty(defaultValue = "15") int highSpeed,
         @JsonProperty(defaultValue = "4.0") double rightSidePenalty,
-        @JsonProperty(defaultValue = "17") int openerSpeedThreshold,
+        @JsonProperty(defaultValue = "15") int openerSpeedThreshold,
 
         @JsonProperty Map<String, Integer> modGemMax,
         @JsonProperty Map<String, Double> setMultipliers,
-        @JsonProperty(defaultValue = "60.0") double modGemThreshold,
+        @JsonProperty(defaultValue = "62.0") double modGemThreshold,
 
         @JsonProperty(defaultValue = "100") int parallelThreshold,
         @JsonProperty(defaultValue = "true") boolean useCache
@@ -38,7 +39,7 @@ public record FilterConfig(
 
     public static FilterConfig defaults() {
         return new FilterConfig(
-                58.0, 66.0, 2, 1, 15, 4.0, 17,
+                56.0, 64.0, 64.0, 2, 1, 15, 4.0, 17,
                 defaultModGemMax(),
                 defaultSetMultipliers(),
                 60.0, 100, true

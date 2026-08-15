@@ -99,7 +99,7 @@ class DecisionEngineTest {
     @Test
     void rightSidePenaltyLowersKeepThresholdForNecklaceWithPreferredMain() {
         FilterConfig customConfig = new FilterConfig(
-                58.0, 66.0, 2, 1, 15, 20.0, 17,
+                58.0, 66.0, 66.0, 2, 1, 15, 20.0, 17,
                 Map.of(), Map.of(),
                 60.0, 100, true
         );
@@ -186,7 +186,7 @@ class DecisionEngineTest {
     @Test
     void modGemPotentialDetectsSalvageablePiece() {
         FilterConfig lowKeepConfig = new FilterConfig(
-                58.0, 60.0, 2, 1, 15, 4.0, 17,
+                58.0, 60.0, 60.0, 2, 1, 15, 4.0, 17,
                 Map.of("AttackPercent", 7),
                 Map.of(),
                 60.0, 100, true

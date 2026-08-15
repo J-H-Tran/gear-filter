@@ -86,7 +86,20 @@ public final class DecisionEngine {
             return modDecision;
         }
 
-        // 7. Manual Review Fallbacks (renumbered)
+        // ---- 7. Reforge potential ----
+        if (gear.getLevel() == 85 && gear.getEnhance() == 15) {
+            double reforgeScore = simulateReforgeScore(gear);
+            if (reforgeScore >= config.reforgeThreshold()) {
+                return new Decision(
+                        Quality.REFORGE_CANDIDATE,
+                        "Becomes viable after reforging (score " + String.format("%.1f", reforgeScore) + ")",
+                        score,
+                        roles
+                );
+            }
+        }
+
+        // 8. Manual Review Fallbacks (renumbered)
         if (score.score() >= effectiveKeep) {
             return review("High Gear Score but incomplete role signal", score, roles);
         }
@@ -107,7 +120,7 @@ public final class DecisionEngine {
             return review("Borderline statistical quality", score, roles);
         }
 
-        // 8. Delete Candidates
+        // 9. Delete Candidates
         if (!best.slotCompatible() && best.usefulStatCount() <= 2 && !score.hasSpike()) {
             return delete("Low score with no coherent role fit", score, roles);
         }
@@ -276,5 +289,30 @@ public final class DecisionEngine {
 
         GearScore potentialScore = gearScorer.score(tempGear);
         return potentialScore.score();
+    }
+
+    private double simulateReforgeScore(Gear gear) {
+        if (gear.getSubstats() == null || gear.getSubstats().isEmpty()) {
+            return 0.0;
+        }
+
+        List<Substat> reforgedSubs = gear.getSubstats().stream()
+                .map(s -> {
+                    Substat newS = new Substat();
+                    newS.setType(s.getType());
+                    newS.setValue(s.getValue() * 1.2);  // 20% increase
+                    newS.setRolls(s.getRolls());
+                    newS.setModified(s.isModified());
+                    return newS;
+                })
+                .collect(Collectors.toList());
+
+        Gear tempGear = new Gear();
+        tempGear.setSubstats(reforgedSubs);
+        // Main stat isn't affected by reforge, but we need it for RoleEvaluator context.
+        // However, we're only using the GearScore, not the role evaluation.
+        // GearScorer only needs the substats and the main stat isn't used for scoring.
+        // So we can leave main as null.
+        return gearScorer.score(tempGear).score();
     }
 }

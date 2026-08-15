@@ -99,6 +99,7 @@ public class Main {
         System.out.println("+15 items: " + enhancedResults.size());
         System.out.println("KEEP: " + qualityCounts.getOrDefault(Quality.KEEP, 0L));
         System.out.println("KEEP_MOD_CANDIDATE: " + qualityCounts.getOrDefault(Quality.KEEP_MOD_CANDIDATE, 0L));
+        System.out.println("REFORGE_CANDIDATE: " + qualityCounts.getOrDefault(Quality.REFORGE_CANDIDATE, 0L));
         System.out.println("REVIEW: " + qualityCounts.getOrDefault(Quality.REVIEW, 0L));
         System.out.println("DELETE_CANDIDATE: " + qualityCounts.getOrDefault(Quality.DELETE_CANDIDATE, 0L));
 

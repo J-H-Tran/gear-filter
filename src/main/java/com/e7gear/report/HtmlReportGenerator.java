@@ -32,6 +32,7 @@ public final class HtmlReportGenerator {
 
         long keep = qualityCounts.getOrDefault(Quality.KEEP, 0L);
         long mod = qualityCounts.getOrDefault(Quality.KEEP_MOD_CANDIDATE, 0L);
+        long reforge = qualityCounts.getOrDefault(Quality.REFORGE_CANDIDATE, 0L);
         long review = qualityCounts.getOrDefault(Quality.REVIEW, 0L);
         long del = qualityCounts.getOrDefault(Quality.DELETE_CANDIDATE, 0L);
 
@@ -60,6 +61,20 @@ public final class HtmlReportGenerator {
                 .filter(r -> r.decision().quality() == Quality.DELETE_CANDIDATE)
                 .collect(Collectors.groupingBy(
                         r -> normalizeSlot(r.gear().getGear()),
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparingDouble(r -> r.decision().gearScore().score()))
+                                        .limit(20)
+                                        .toList()
+                        )
+                ));
+
+        // ---- REFORGE grouped by set ----
+        Map<String, List<AnalysisResult>> reforgeBySet = enhanced.stream()
+                .filter(r -> r.decision().quality() == Quality.REFORGE_CANDIDATE)
+                .collect(Collectors.groupingBy(
+                        r -> r.gear().getSet() != null ? r.gear().getSet().replace("Set", "") : "Unknown",
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 list -> list.stream()
@@ -103,6 +118,7 @@ public final class HtmlReportGenerator {
         html.append("    .card .value { font-size: 28px; font-weight: 600; }\n");
         html.append("    .card .value.keep { color: #2ea043; }\n");
         html.append("    .card .value.mod { color: #d29922; }\n");
+        html.append("    .card .value.reforge { color: #58a6ff; }\n");
         html.append("    .card .value.review { color: #f0883e; }\n");
         html.append("    .card .value.delete { color: #f85149; }\n");
         html.append("    .card .value.unenhanced { color: #8b949e; }\n");
@@ -117,6 +133,7 @@ public final class HtmlReportGenerator {
         html.append("    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }\n");
         html.append("    .badge.keep { background: #2ea04333; color: #2ea043; border: 1px solid #2ea04366; }\n");
         html.append("    .badge.mod { background: #d2992233; color: #d29922; border: 1px solid #d2992266; }\n");
+        html.append("    .badge.reforge { background: #58a6ff33; color: #58a6ff; border: 1px solid #58a6ff66; }\n");
         html.append("    .badge.review { background: #f0883e33; color: #f0883e; border: 1px solid #f0883e66; }\n");
         html.append("    .badge.delete { background: #f8514933; color: #f85149; border: 1px solid #f8514966; }\n");
         html.append("    .badge.unenhanced { background: #8b949e33; color: #8b949e; border: 1px solid #8b949e66; }\n");
@@ -137,6 +154,7 @@ public final class HtmlReportGenerator {
         html.append("    <div class=\"card\"><div class=\"label\">+15 Items</div><div class=\"value\">").append(enhancedCount).append("</div></div>\n");
         html.append("    <div class=\"card\"><div class=\"label\">KEEP</div><div class=\"value keep\">").append(keep).append("</div></div>\n");
         html.append("    <div class=\"card\"><div class=\"label\">MOD CANDIDATE</div><div class=\"value mod\">").append(mod).append("</div></div>\n");
+        html.append("    <div class=\"card\"><div class=\"label\">REFORGE CANDIDATE</div><div class=\"value reforge\">").append(reforge).append("</div></div>\n");
         html.append("    <div class=\"card\"><div class=\"label\">REVIEW</div><div class=\"value review\">").append(review).append("</div></div>\n");
         html.append("    <div class=\"card\"><div class=\"label\">DELETE CANDIDATE</div><div class=\"value delete\">").append(del).append("</div></div>\n");
         html.append("    <div class=\"card\"><div class=\"label\">UNENHANCED</div><div class=\"value unenhanced\">").append(total - enhancedCount).append("</div></div>\n");
@@ -181,6 +199,30 @@ public final class HtmlReportGenerator {
             html.append("  <p style=\"color:#8b949e;\">No DELETE_CANDIDATE items found.</p>\n");
         }
 
+        // ---- REFORGE tables grouped by set ----
+        html.append("  <h2>🔧 Top REFORGE_CANDIDATE by Set (Lowest Current Score, Reforge makes them viable)</h2>\n");
+        boolean hasReforges = false;
+        List<String> setOrder = reforgeBySet.keySet().stream().sorted().toList();
+        for (String set : setOrder) {
+            List<AnalysisResult> setReforges = reforgeBySet.get(set);
+            if (setReforges.isEmpty()) continue;
+            hasReforges = true;
+            html.append("  <h3>⚡ ").append(set).append("</h3>\n");
+            html.append("  <div class=\"table-wrap\">\n");
+            html.append("    <table>\n");
+            html.append("      <thead><tr><th>Slot</th><th>Main</th><th>Substats</th><th>Current Score</th><th>Reason</th></tr></thead>\n");
+            html.append("      <tbody>\n");
+            for (AnalysisResult r : setReforges) {
+                html.append(rowHtmlForReforge(r));
+            }
+            html.append("      </tbody>\n");
+            html.append("    </table>\n");
+            html.append("  </div>\n");
+        }
+        if (!hasReforges) {
+            html.append("  <p style=\"color:#8b949e;\">No REFORGE_CANDIDATE items found.</p>\n");
+        }
+
         // ---- Borderline REVIEW ----
         html.append("  <h2>📋 Borderline REVIEW (Lowest Score, at risk of deletion)</h2>\n");
         html.append("  <div class=\"table-wrap\">\n");
@@ -214,15 +256,15 @@ public final class HtmlReportGenerator {
 
         // ---- JavaScript for Charts ----
         html.append("<script>\n");
-        // Quality chart
+        // Quality chart (include REFORGE_CANDIDATE)
         html.append("const qualityCtx = document.getElementById('qualityChart').getContext('2d');\n");
         html.append("new Chart(qualityCtx, {\n");
         html.append("  type: 'doughnut',\n");
         html.append("  data: {\n");
-        html.append("    labels: ['KEEP', 'MOD CANDIDATE', 'REVIEW', 'DELETE CANDIDATE'],\n");
+        html.append("    labels: ['KEEP', 'MOD CANDIDATE', 'REFORGE CANDIDATE', 'REVIEW', 'DELETE CANDIDATE'],\n");
         html.append("    datasets: [{\n");
-        html.append("      data: [").append(keep).append(", ").append(mod).append(", ").append(review).append(", ").append(del).append("],\n");
-        html.append("      backgroundColor: ['#2ea043', '#d29922', '#f0883e', '#f85149'],\n");
+        html.append("      data: [").append(keep).append(", ").append(mod).append(", ").append(reforge).append(", ").append(review).append(", ").append(del).append("],\n");
+        html.append("      backgroundColor: ['#2ea043', '#d29922', '#58a6ff', '#f0883e', '#f85149'],\n");
         html.append("      borderColor: '#0d1117',\n");
         html.append("      borderWidth: 2\n");
         html.append("    }]\n");
@@ -241,6 +283,7 @@ public final class HtmlReportGenerator {
         html.append("    datasets: [\n");
         html.append("      { label: 'KEEP', data: ").append(jsonArray(slotLabels, slotStats, Quality.KEEP)).append(", backgroundColor: '#2ea043' },\n");
         html.append("      { label: 'MOD CANDIDATE', data: ").append(jsonArray(slotLabels, slotStats, Quality.KEEP_MOD_CANDIDATE)).append(", backgroundColor: '#d29922' },\n");
+        html.append("      { label: 'REFORGE CANDIDATE', data: ").append(jsonArray(slotLabels, slotStats, Quality.REFORGE_CANDIDATE)).append(", backgroundColor: '#58a6ff' },\n");
         html.append("      { label: 'REVIEW', data: ").append(jsonArray(slotLabels, slotStats, Quality.REVIEW)).append(", backgroundColor: '#f0883e' },\n");
         html.append("      { label: 'DELETE CANDIDATE', data: ").append(jsonArray(slotLabels, slotStats, Quality.DELETE_CANDIDATE)).append(", backgroundColor: '#f85149' }\n");
         html.append("    ]\n");
@@ -264,6 +307,7 @@ public final class HtmlReportGenerator {
         html.append("    datasets: [\n");
         html.append("      { label: 'KEEP', data: ").append(jsonArray(setLabels, setStats, Quality.KEEP)).append(", backgroundColor: '#2ea043' },\n");
         html.append("      { label: 'MOD CANDIDATE', data: ").append(jsonArray(setLabels, setStats, Quality.KEEP_MOD_CANDIDATE)).append(", backgroundColor: '#d29922' },\n");
+        html.append("      { label: 'REFORGE CANDIDATE', data: ").append(jsonArray(setLabels, setStats, Quality.REFORGE_CANDIDATE)).append(", backgroundColor: '#58a6ff' },\n");
         html.append("      { label: 'REVIEW', data: ").append(jsonArray(setLabels, setStats, Quality.REVIEW)).append(", backgroundColor: '#f0883e' },\n");
         html.append("      { label: 'DELETE CANDIDATE', data: ").append(jsonArray(setLabels, setStats, Quality.DELETE_CANDIDATE)).append(", backgroundColor: '#f85149' }\n");
         html.append("    ]\n");
@@ -330,10 +374,24 @@ public final class HtmlReportGenerator {
                 "</tr>\n";
     }
 
+    // Row for REFORGE tables (shows Slot, no Set column because it's grouped by set)
+    private static String rowHtmlForReforge(AnalysisResult r) {
+        Gear g = r.gear();
+        Decision d = r.decision();
+        return "      <tr>" +
+                "<td>" + normalizeSlot(g.getGear()) + "</td>" +
+                "<td>" + (g.getMainStatType() != null ? abbreviateStat(g.getMainStatType()) : "") + " " + (g.getMainStatValue() != 0 ? g.getMainStatValue() : "") + "</td>" +
+                "<td style=\"font-size:12px;\">" + formatSubstatsShort(g) + "</td>" +
+                "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
+                "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
+                "</tr>\n";
+    }
+
     private static String qualityClass(Quality q) {
         return switch (q) {
             case KEEP -> "keep";
             case KEEP_MOD_CANDIDATE -> "mod";
+            case REFORGE_CANDIDATE -> "reforge";
             case REVIEW -> "review";
             case DELETE_CANDIDATE -> "delete";
             case UNENHANCED -> "unenhanced";

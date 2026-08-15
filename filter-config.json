@@ -1,6 +1,7 @@
 {
   "reviewScore": 56.0,
   "keepScore": 64.0,
+  "reforgeThreshold": 64.0,
   "strongCoreStats": 2,
   "reviewCoreStats": 1,
   "highSpeed": 15,
