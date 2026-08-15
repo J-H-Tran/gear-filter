@@ -34,7 +34,7 @@ public final class GearInventoryCsvReport {
         // --- Load config ---
         FilterConfig config = ConfigLoader.load();
         GearScorer gearScorer = new GearScorer();
-        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
+        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer, config);
         DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
 
         Path input = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");

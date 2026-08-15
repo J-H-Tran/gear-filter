@@ -1,5 +1,6 @@
 package com.e7gear.role;
 
+import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
 import com.e7gear.scorer.GearScorer;
@@ -98,9 +99,11 @@ public final class RoleEvaluator {
     );
 
     private final GearScorer gearScorer;
+    private final FilterConfig config;
 
-    public RoleEvaluator(GearScorer gearScorer) {
+    public RoleEvaluator(GearScorer gearScorer, FilterConfig config) {
         this.gearScorer = gearScorer;
+        this.config = config;
     }
 
     public RoleEvaluation evaluate(Gear gear) {
@@ -120,8 +123,7 @@ public final class RoleEvaluator {
                     int byUseful = Integer.compare(a.usefulStatCount(), b.usefulStatCount());
                     if (byUseful != 0) return byUseful;
 
-                    int bySlot = Integer.compare(
-                            a.slotPreferredStatCount(), b.slotPreferredStatCount());
+                    int bySlot = Integer.compare(a.slotPreferredStatCount(), b.slotPreferredStatCount());
                     if (bySlot != 0) return bySlot;
 
                     return Double.compare(a.score(), b.score());
@@ -143,7 +145,7 @@ public final class RoleEvaluator {
                 .getOrDefault(role, Map.of())
                 .getOrDefault(slot, Set.of());
 
-        double score = 0.0;
+        double rawScore = 0.0;
         int useful = 0;
         int core = 0;
 
@@ -156,7 +158,7 @@ public final class RoleEvaluator {
                 }
 
                 useful++;
-                score += gearScorer.calculateStatScore(statType, substat.getValue());
+                rawScore += gearScorer.calculateStatScore(statType, substat.getValue());
 
                 if (slotPreferredStats.contains(statType)) {
                     core++;
@@ -176,9 +178,13 @@ public final class RoleEvaluator {
 
         boolean viable = useful >= 1;
 
+        // Apply set multiplier from config
+        double multiplier = config.setMultipliers().getOrDefault(gear.getSet(), 1.0);
+        double adjustedScore = rawScore * multiplier;
+
         return new RoleScore(
                 role,
-                score,
+                adjustedScore,          // now includes set weighting
                 useful,
                 core,
                 core,

@@ -33,7 +33,7 @@ public class Main {
 
         // --- Shared components ---
         GearScorer gearScorer = new GearScorer();
-        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
+        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer, config);
         DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
 
         Path inputPath = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
