@@ -4,6 +4,7 @@ import com.e7gear.Main.AnalysisResult;
 import com.e7gear.app.engine.Decision;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Quality;
+import com.e7gear.gear.Substat;
 import com.e7gear.stats.StatType;
 
 import java.io.IOException;
@@ -12,7 +13,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public final class HtmlReportGenerator {
@@ -291,9 +297,18 @@ public final class HtmlReportGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append("<h2>📋 Borderline REVIEW (Lowest Score, at risk of deletion)</h2>");
         sb.append("<div class=\"table-wrap\">");
-        sb.append("<table><thead><tr><th>Slot</th><th>Set</th><th>Main</th><th>Substats</th><th>Score</th><th>Reason</th></tr></thead><tbody>");
+        sb.append("<table><thead><tr>")
+                .append("<th>Slot</th>")
+                .append("<th>Set</th>")
+                .append("<th>Main</th>")
+                .append("<th>Substats</th>")
+                .append("<th>Score</th>")
+                .append("<th>Quality</th>")
+                .append("<th>Best Role</th>")
+                .append("<th>Reason</th>")
+                .append("</tr></thead><tbody>");
         if (borderlineReview.isEmpty()) {
-            sb.append("<tr><td colspan=\"6\" style=\"text-align:center;color:#8b949e;\">No REVIEW items found.</td></tr>");
+            sb.append("<tr><td colspan=\"8\" style=\"text-align:center;color:#8b949e;\">No REVIEW items found.</td></tr>");
         } else {
             for (AnalysisResult r : borderlineReview) {
                 sb.append(rowHtml(r));
@@ -307,7 +322,17 @@ public final class HtmlReportGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append("<h2>📊 All +15 Items (sorted by Score ascending)</h2>");
         sb.append("<div class=\"table-wrap\" style=\"max-height:600px;\">");
-        sb.append("<table><thead><tr><th>Slot</th><th>Set</th><th>Main</th><th>Substats</th><th>Score</th><th>Quality</th><th>Reason</th></tr></thead><tbody>");
+        sb.append("<table id=\"all-gear-table\"><thead><tr>")
+                .append("<th class=\"sortable\">Slot</th>")
+                .append("<th class=\"sortable\">Set</th>")
+                .append("<th class=\"sortable\">Main</th>")
+                .append("<th class=\"sortable\">Substats</th>")
+                .append("<th class=\"sortable\" data-type=\"number\">Score</th>")
+                .append("<th class=\"sortable\">Quality</th>")
+                .append("<th class=\"sortable\">Best Role</th>")
+                .append("<th>Reason</th>")
+                .append("</tr></thead><tbody>");
+
         for (AnalysisResult r : allEnhancedSorted) {
             sb.append(rowHtml(r));
         }
@@ -320,15 +345,39 @@ public final class HtmlReportGenerator {
     private static String rowHtml(AnalysisResult r) {
         Gear g = r.gear();
         Decision d = r.decision();
+        String bestRole = determineBestRole(r);
+
+        String mainStatRaw = rawMainStat(g); // Plain text for data-sortable-value
+
         return "      <tr>" +
-                "<td>" + slotIcon(g.getGear()) + "</td>" +
-                "<td>" + setIcon(g.getSet()) + "</td>" +
-                "<td>" + formatMainStat(g) + "</td>" +
-                "<td style=\"font-size:12px;\">" + formatSubstatsWithIcons(g) + "</td>" +
-                "<td>" + String.format("%.1f", d.gearScore().score()) + "</td>" +
-                "<td><span class=\"badge " + qualityClass(d.quality()) + "\">" + d.quality() + "</span></td>" +
+                "<td data-sortable-value=\"" + escapeHtml(normalizeSlot(g.getGear())) + "\">" + slotIcon(g.getGear()) + "</td>" +
+                "<td data-sortable-value=\"" + escapeHtml(normalizeSet(g.getSet())) + "\">" + setIcon(g.getSet()) + "</td>" +
+                "<td data-sortable-value=\"" + escapeHtml(mainStatRaw) + "\">" + formatMainStat(g) + "</td>" +
+                "<td>" + formatSubstatsWithIcons(g) + "</td>" +
+                "<td data-sortable-value=\"" + d.gearScore().score() + "\">" + String.format("%.1f", d.gearScore().score()) + "</td>" +
+                "<td data-sortable-value=\"" + escapeHtml(d.quality().name()) + "\"><span class=\"badge " + qualityClass(d.quality()) + "\">" + d.quality() + "</span></td>" +
+                "<td data-sortable-value=\"" + escapeHtml(bestRole) + "\"><span class=\"badge role-badge\">" + bestRole + "</span></td>" +
                 "<td style=\"font-size:12px;color:#8b949e;\">" + d.reason() + "</td>" +
                 "</tr>\n";
+    }
+
+    // Extract clean plain text for sorting main stats without HTML
+    private static String rawMainStat(Gear g) {
+        String type = g.getMainStatType();
+        double value = g.getMainStatValue();
+        if (type == null) return "";
+        String abbr = abbreviateStat(type);
+        String valStr = (value % 1 == 0) ? String.format("%d", (long) value) : String.format("%.1f", value);
+        return abbr + " " + valStr;
+    }
+
+    // Utility helper to keep HTML attribute quotes valid
+    private static String escapeHtml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 
     private static String rowHtmlWithoutSlot(AnalysisResult r) {
@@ -361,20 +410,20 @@ public final class HtmlReportGenerator {
         String normalized = normalizeSlot(slotName);
         String filename = SLOT_IMAGES.get(normalized);
         if (filename == null) return normalized;
-        return iconHtml(IMAGE_PATH + filename, normalized, 24);
+        return iconHtml(IMAGE_PATH + filename, normalized, 30);
     }
 
     private static String setIcon(String setRaw) {
         String normalized = normalizeSet(setRaw);
         String filename = SET_IMAGES.get(normalized);
         if (filename == null) return normalized;
-        return iconHtml(IMAGE_PATH + filename, normalized, 24);
+        return iconHtml(IMAGE_PATH + filename, normalized, 30);
     }
 
     private static String statIcon(String abbr) {
         String filename = STAT_IMAGES.get(abbr);
         if (filename == null) return abbr;
-        return iconHtml(IMAGE_PATH + filename, abbr, 18);
+        return iconHtml(IMAGE_PATH + filename, abbr, 25);
     }
 
     private static String iconHtml(String src, String alt, int size) {
@@ -390,20 +439,46 @@ public final class HtmlReportGenerator {
         if (type == null) return "";
         String abbr = abbreviateStat(type);
         String valStr = (value % 1 == 0) ? String.format("%d", (long) value) : String.format("%.1f", value);
-        return statIcon(abbr) + " " + valStr;
+        // Wrap in a flex container: icon and value are aligned vertically, and value text is 20px
+        return "<span style=\"display:inline-flex;align-items:center;font-size:20px;\">"
+                + statIcon(abbr) + " " + valStr
+                + "</span>";
     }
 
     private static String formatSubstatsWithIcons(Gear g) {
         if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
-        return g.getSubstats().stream()
-                .map(s -> {
-                    StatType stat = StatType.fromString(s.getType());
-                    String typeAbbr = stat != null ? stat.abbreviation() : s.getType();
-                    String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
-                    String rolls = s.getRolls() + (s.isModified() ? "★" : "");
-                    return statIcon(typeAbbr) + " " + val + "(" + rolls + ")";
-                })
-                .collect(Collectors.joining(" "));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: center;\">");
+
+        List<Substat> substats = g.getSubstats();
+        for (int i = 0; i < 4; i++) {
+            if (i < substats.size()) {
+                Substat s = substats.get(i);
+                StatType stat = StatType.fromString(s.getType());
+                String typeAbbr = stat != null ? stat.abbreviation() : s.getType();
+                String val = s.getValue() % 1 == 0 ? String.format("%d", (long) s.getValue()) : String.format("%.1f", s.getValue());
+                int rollsCount = s.getRolls() - 1;
+                String modifiedTag = s.isModified()
+                        ? "<img src=\"images/is-modded.png\" style=\"height: 1em; vertical-align: middle;\" alt=\"★\" />"
+                        : "";
+
+                sb.append("<div style=\"display: flex; align-items: center; font-size: 20px; line-height: 1; gap: 4px;\">")
+                        .append(statIcon(typeAbbr))
+                        .append("<span>")
+                        .append(val)
+                        .append("(")
+                        .append(rollsCount)
+                        .append(modifiedTag)
+                        .append(")")
+                        .append("</span>")
+                        .append("</div>");
+            } else {
+                sb.append("<div></div>");
+            }
+        }
+        sb.append("</div>");
+        return sb.toString();
     }
 
     // ----- Normalization helpers (unchanged) -----
@@ -477,5 +552,86 @@ public final class HtmlReportGenerator {
                 .map(label -> stats.getOrDefault(label, Map.of()).getOrDefault(quality, 0L))
                 .toList();
         return jsonArrayLong(values);
+    }
+
+    private static String determineBestRole(AnalysisResult r) {
+        Gear g = r.gear();
+        String set = normalizeSet(g.getSet());
+        String slot = normalizeSlot(g.getGear());
+        String mainType = g.getMainStatType() != null ? g.getMainStatType() : "";
+        String mainAbbr = abbreviateStat(mainType);
+
+        // Check substat presence
+        boolean hasAtk = hasSubstat(g, "Atk%");
+        boolean hasCrit = hasSubstat(g, "CC%") || hasSubstat(g, "CDMG%");
+        boolean hasEff = hasSubstat(g, "Eff%");
+        boolean hasER = hasSubstat(g, "ER%");
+        boolean hasHpDef = hasSubstat(g, "Hp%") || hasSubstat(g, "Def%");
+
+        double spdVal = getSubstatValue(g, "Spd");
+
+        // 1. Lifesteal Units
+        if ("Lifesteal".equals(set)) {
+            return "Lifesteal";
+        }
+
+        // 2. High Speed / Opener
+        if (spdVal >= 17 || "Opener".equalsIgnoreCase(r.decision().reason())) {
+            return "Opener / Speed Contender";
+        }
+
+        // 3. Debuffer
+        // Driven by Effectiveness (ring main stat or high EFF substat focus)
+        boolean isEffMain = "Ring".equals(slot) && "Eff%".equalsIgnoreCase(mainAbbr);
+        if (isEffMain || (hasEff && !hasCrit && !hasAtk)) {
+            return "Debuffer";
+        }
+
+        // 4. Support / Tank
+        // Heavy focus on HP/DEF/ER, minimal offensive presence
+        boolean isErMain = "Ring".equals(slot) && "ER%".equalsIgnoreCase(mainAbbr);
+        if (isErMain || "Resist".equals(set) || (hasER && hasHpDef && !hasCrit && !hasAtk)) {
+            return "Support";
+        }
+        if (hasHpDef && !hasCrit && !hasAtk) {
+            return "Support";
+        }
+
+        // 5. Bruiser (HP DPS) vs. DPS
+        // Both care about Crit (CC%/CDMG%). Bruiser incorporates heavy HP%/DEF% values or HP/DEF main stats.
+        boolean isHpDefMainAcc = ("Necklace".equals(slot) || "Ring".equals(slot) || "Boots".equals(slot))
+                && ("Hp%".equalsIgnoreCase(mainAbbr) || "Def%".equalsIgnoreCase(mainAbbr));
+
+        if (hasCrit) {
+            if (hasHpDef || isHpDefMainAcc || "Counter".equals(set) || "Injury".equals(set) || "Riposte".equals(set)) {
+                return "Bruiser";
+            }
+            return "DPS";
+        }
+
+        if (hasAtk) {
+            return hasHpDef ? "Bruiser" : "DPS";
+        }
+
+        return "Support";
+    }
+
+    private static boolean hasSubstat(Gear g, String statAbbr) {
+        if (g.getSubstats() == null) return false;
+        return g.getSubstats().stream()
+                .anyMatch(s -> statAbbr.equalsIgnoreCase(StatType.fromString(s.getType()) != null
+                        ? StatType.fromString(s.getType()).abbreviation()
+                        : s.getType()));
+    }
+
+    private static double getSubstatValue(Gear g, String statAbbr) {
+        if (g.getSubstats() == null) return 0.0;
+        return g.getSubstats().stream()
+                .filter(s -> statAbbr.equalsIgnoreCase(StatType.fromString(s.getType()) != null
+                        ? StatType.fromString(s.getType()).abbreviation()
+                        : s.getType()))
+                .mapToDouble(Substat::getValue)
+                .findFirst()
+                .orElse(0.0);
     }
 }

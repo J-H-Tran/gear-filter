@@ -40,6 +40,13 @@
         .table-wrap table { border-collapse: collapse; }
         .table-wrap thead { position: sticky; top: 0; z-index: 1; }
 
+        /* Sortable Columns */
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { color: #f0f6fc; }
+        th.sortable::after { content: ' ⇕'; opacity: 0.4; }
+        th.sortable.asc::after { content: ' ▲'; opacity: 1; }
+        th.sortable.desc::after { content: ' ▼'; opacity: 1; }
+
         /* Badges */
         .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
         .badge.keep { background: #2ea04333; color: #2ea043; border: 1px solid #2ea04366; }
@@ -134,11 +141,59 @@
         { label: 'KEEP', data: {{SET_KEEP}}, backgroundColor: '#2ea043' },
     { label: 'MOD CANDIDATE', data: {{SET_MOD}}, backgroundColor: '#d29922' },
     { label: 'REFORGE CANDIDATE', data: {{SET_REFORGE}}, backgroundColor: '#58a6ff' },
-    { label: 'REVIEW', data: {{SET_REVIEW}}, backgroundColor: '#f0883e' },
+    { label: 'REVIEW', data: {{SLOT_REVIEW}}, backgroundColor: '#f0883e' },
     { label: 'DELETE CANDIDATE', data: {{SET_DELETE}}, backgroundColor: '#f85149' }
     ]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#c9d1d9' } } }, scales: { x: { ticks: { color: '#8b949e' } }, y: { ticks: { color: '#8b949e', stepSize: 1 } } } }
+    });
+
+    // Generic Table Sorting Delegator for All Items Table
+    // Generic Table Sorting Delegator for All Items Table
+    document.addEventListener('DOMContentLoaded', () => {
+        const table = document.getElementById('all-gear-table');
+        if (!table) return;
+
+        const headers = table.querySelectorAll('th.sortable');
+        headers.forEach((th, colIndex) => {
+            th.addEventListener('click', () => {
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const isNumeric = th.dataset.type === 'number';
+                const currentOrder = th.classList.contains('asc') ? 'asc' : (th.classList.contains('desc') ? 'desc' : null);
+                const nextOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+
+                headers.forEach(h => h.classList.remove('asc', 'desc'));
+                th.classList.add(nextOrder);
+
+                const getVal = (cell) => {
+                    if (cell.dataset.sortableValue !== undefined) {
+                        return cell.dataset.sortableValue.trim();
+                    }
+                    const img = cell.querySelector('img');
+                    if (img && img.alt) {
+                        return img.alt.trim();
+                    }
+                    return cell.textContent.trim();
+                };
+
+                rows.sort((a, b) => {
+                    let cellA = getVal(a.children[colIndex]);
+                    let cellB = getVal(b.children[colIndex]);
+
+                    if (isNumeric) {
+                        let valA = parseFloat(cellA) || 0;
+                        let valB = parseFloat(cellB) || 0;
+                        return nextOrder === 'asc' ? valA - valB : valB - valA;
+                    } else {
+                        return nextOrder === 'asc' ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                    }
+                });
+
+                tbody.innerHTML = '';
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
     });
 </script>
 </body>

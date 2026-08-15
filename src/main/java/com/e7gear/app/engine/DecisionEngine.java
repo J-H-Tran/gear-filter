@@ -308,9 +308,17 @@ public final class DecisionEngine {
         }
 
         if (bestDead != null && bestPotentialScore >= config.modGemThreshold()) {
+            StatType deadStat = StatType.fromString(bestDead.getType());
+            String deadAbbr = deadStat != null ? deadStat.abbreviation() : bestDead.getType();
+
+            // If bestReplacement is already a StatType, use bestReplacement.abbreviation() directly;
+            // otherwise, look it up via StatType.fromString(bestReplacement.displayName())
+            StatType replaceStat = StatType.fromString(bestReplacement.displayName());
+            String replaceAbbr = replaceStat != null ? replaceStat.abbreviation() : bestReplacement.displayName();
+
             return new Decision(Quality.KEEP_MOD_CANDIDATE,
                     String.format("Salvageable with mod: replace %s with %s (+%.1f score)",
-                            bestDead.getType(), bestReplacement.displayName(), bestImprovement),
+                            deadAbbr, replaceAbbr, bestImprovement),
                     originalScore, roles);
         }
 

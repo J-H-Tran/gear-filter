@@ -6,7 +6,7 @@
   "reviewCoreStats": 1,
   "highSpeed": 15,
   "rightSidePenalty": 4.0,
-  "openerSpeedThreshold": 16,
+  "openerSpeedThreshold": 15,
   "modGemThreshold": 62.0,
   "modGemMax": {
     "AttackPercent": { "85": 8, "88": 9, "90": 9 },
