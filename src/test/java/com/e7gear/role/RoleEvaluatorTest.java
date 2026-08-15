@@ -1,17 +1,24 @@
 package com.e7gear.role;
 
+import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
+import com.e7gear.scorer.GearScorer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RoleEvaluatorTest {
 
-    private final RoleEvaluator evaluator = new RoleEvaluator();
+    private RoleEvaluator evaluator;
+
+    @BeforeEach
+    void setUp() {
+        evaluator = new RoleEvaluator(new GearScorer(), FilterConfig.defaults());
+    }
 
     @Test
     void identifiesPureDpsGear() {
@@ -147,8 +154,6 @@ class RoleEvaluatorTest {
         assertEquals(Role.DPS, result.bestRole());
         assertEquals(3, result.scoreFor(Role.DPS).usefulStatCount());
 
-        // No KEEP/DELETE property exists in RoleEvaluator. It only reports
-        // suitability; DecisionEngine will make the eventual decision.
         assertTrue(result.scoreFor(Role.DPS).score() > 0);
     }
 

@@ -1,5 +1,6 @@
 package com.e7gear;
 
+import com.e7gear.config.FilterConfig;
 import com.e7gear.engine.Decision;
 import com.e7gear.engine.DecisionEngine;
 import com.e7gear.gear.Gear;
@@ -17,9 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class GearInventoryAnalysisTest {
 
@@ -51,6 +50,7 @@ public class GearInventoryAnalysisTest {
         assertEquals("Health", gear.getMain().getType());
         assertEquals(2835, gear.getMain().getValue());
     }
+
     @Test
     void analyzeRealInventory() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
@@ -62,9 +62,10 @@ public class GearInventoryAnalysisTest {
 
         List<Gear> gear = inventory.getItems();
 
+        FilterConfig config = FilterConfig.defaults();
         GearScorer scorer = new GearScorer();
-        RoleEvaluator roles = new RoleEvaluator();
-        DecisionEngine decisions = new DecisionEngine();
+        RoleEvaluator roles = new RoleEvaluator(scorer, config);
+        DecisionEngine decisions = new DecisionEngine(config, scorer);
 
         Map<Quality, Long> counts = gear.stream()
                 .filter(g -> g.getEnhance() == 15)
@@ -84,5 +85,7 @@ public class GearInventoryAnalysisTest {
 
         counts.forEach((quality, count) ->
                 System.out.println(quality + ": " + count));
+
+        // We can add assertions to ensure counts are reasonable.
     }
 }

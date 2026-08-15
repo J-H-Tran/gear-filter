@@ -1,18 +1,26 @@
 package com.e7gear.role;
 
+import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.MainStat;
 import com.e7gear.gear.Substat;
+import com.e7gear.scorer.GearScorer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RoleEvaluatorContextTest {
-    private final RoleEvaluator evaluator = new RoleEvaluator();
+
+    private RoleEvaluator evaluator;
+
+    @BeforeEach
+    void setUp() {
+        FilterConfig config = FilterConfig.defaults();
+        evaluator = new RoleEvaluator(new GearScorer(), config);
+    }
 
     @Test
     void dpsNecklaceUsesDpsAccessoryRecommendations() {
@@ -91,6 +99,22 @@ class RoleEvaluatorContextTest {
         assertTrue(dps.viable());
     }
 
+    @Test
+    void setMultiplierAffectsRoleScore() {
+        // Create gear with Speed set and DPS stats.
+        Gear gear = gear("Weapon", "Attack",
+                sub("AttackPercent", 10),
+                sub("Speed", 10));
+        gear.setSet("SpeedSet");
+
+        // Without multiplier, raw DPS score = 10 + 10*2 = 30.
+        // With multiplier 1.3, adjusted = 39.
+        RoleScore dps = evaluator.evaluate(gear).scoreFor(Role.DPS);
+        // Since config has SpeedSet multiplier 1.3, score should be 39.
+        assertEquals(39.0, dps.score(), 1e-9);
+    }
+
+    // Helper methods
     private static Gear gear(String slot, String mainType, Substat... subs) {
         Gear gear = new Gear();
         gear.setGear(slot);
