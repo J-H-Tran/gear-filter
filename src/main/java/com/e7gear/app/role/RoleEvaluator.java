@@ -1,56 +1,34 @@
 package com.e7gear.app.role;
 
+import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.config.FilterConfig;
 import com.e7gear.gear.Gear;
 import com.e7gear.gear.Substat;
-import com.e7gear.app.scorer.GearScorer;
 import com.e7gear.stats.StatType;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Evaluates role suitability using both substats and the slot/main-stat
- * recommendations in the 2026 equipment guide.
- *
- * The evaluator reports suitability; it does not decide whether gear should
- * be deleted.
- */
 public final class RoleEvaluator {
 
     private static final List<Role> ROLES = List.of(Role.DPS, Role.BRUISER, Role.SUPPORT, Role.DEBUFFER);
 
-    // Role stat sets (using StatType)
     private static final Map<Role, Set<StatType>> ROLE_STATS = Map.of(
             Role.DPS, Set.of(
-                    StatType.ATTACK_PERCENT,
-                    StatType.CRIT_CHANCE,
-                    StatType.CRIT_DAMAGE,
-                    StatType.SPEED
+                    StatType.ATTACK_PERCENT, StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.SPEED
             ),
             Role.BRUISER, Set.of(
-                    StatType.HEALTH_PERCENT,
-                    StatType.DEFENSE_PERCENT,
-                    StatType.CRIT_CHANCE,
-                    StatType.CRIT_DAMAGE,
-                    StatType.SPEED
+                    StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.CRIT_CHANCE, StatType.CRIT_DAMAGE, StatType.SPEED
             ),
             Role.SUPPORT, Set.of(
-                    StatType.HEALTH_PERCENT,
-                    StatType.DEFENSE_PERCENT,
-                    StatType.EFFECT_RESISTANCE,
-                    StatType.SPEED
+                    StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.EFFECT_RESISTANCE, StatType.SPEED
             ),
             Role.DEBUFFER, Set.of(
-                    StatType.HEALTH_PERCENT,
-                    StatType.DEFENSE_PERCENT,
-                    StatType.EFFECTIVENESS,
-                    StatType.SPEED
+                    StatType.HEALTH_PERCENT, StatType.DEFENSE_PERCENT, StatType.EFFECTIVENESS, StatType.SPEED
             )
     );
 
-    // Slot-specific preferred substats (using StatType)
     private static final Map<Role, Map<String, Set<StatType>>> SLOT_STATS = Map.of(
             Role.DPS, Map.of(
                     "Necklace", Set.of(StatType.CRIT_DAMAGE, StatType.CRIT_CHANCE, StatType.ATTACK_PERCENT),
@@ -74,7 +52,6 @@ public final class RoleEvaluator {
             )
     );
 
-    // Preferred main stats by role and slot (using StatType)
     private static final Map<Role, Map<String, Set<StatType>>> MAIN_STATS = Map.of(
             Role.DPS, Map.of(
                     "Necklace", Set.of(StatType.CRIT_DAMAGE, StatType.CRIT_CHANCE, StatType.ATTACK_PERCENT),
@@ -135,20 +112,14 @@ public final class RoleEvaluator {
         return new RoleEvaluation(scores, bestRole);
     }
 
-    private RoleScore evaluateRole(Gear gear, Role role) {
-        if (gear == null) {
-            return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
-        }
-
-        // 🟢 Skip NONE role to avoid null stats
-        if (role == Role.NONE) {
+    public RoleScore evaluateRole(Gear gear, Role role) {
+        if (gear == null || role == Role.NONE) {
             return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
         }
 
         String slot = normalizeSlot(gear.getGear());
         Set<StatType> roleStats = ROLE_STATS.get(role);
         if (roleStats == null) {
-            // Should not happen for defined roles, but safe fallback
             return new RoleScore(role, 0.0, 0, 0, 0, false, false, false);
         }
 
@@ -189,26 +160,44 @@ public final class RoleEvaluator {
 
         boolean viable = useful >= 1;
 
-        // 🟢 Safe set multiplier with null check
         String set = gear.getSet();
         double multiplier = config.setMultipliers().getOrDefault(set != null ? set : "", 1.0);
         double adjustedScore = rawScore * multiplier;
+        int coreStatCount = countCoreStats(gear, role);
+        int slotPreferredCount = countSlotPreferredStats(gear, role);
 
         return new RoleScore(
                 role,
                 adjustedScore,
                 useful,
-                core,
-                core,
+                coreStatCount,
+                slotPreferredCount,
                 mainPreferred,
                 slotCompatible,
                 viable
         );
     }
 
+    private int countCoreStats(Gear gear, Role role) {
+        if (gear == null || gear.getSubstats() == null) return 0;
+        String slot = normalizeSlot(gear.getGear());
+        Set<StatType> slotPreferredStats = SLOT_STATS
+                .getOrDefault(role, Map.of())
+                .getOrDefault(slot, Set.of());
+
+        return (int) gear.getSubstats().stream()
+                .filter(s -> s != null)
+                .map(s -> StatType.fromString(s.getType()))
+                .filter(st -> st != null && slotPreferredStats.contains(st))
+                .count();
+    }
+
+    private int countSlotPreferredStats(Gear gear, Role role) {
+        return countCoreStats(gear, role);
+    }
+
     private String normalizeSlot(String slot) {
         if (slot == null) return "";
-
         return switch (slot) {
             case "Neck", "Necklace" -> "Necklace";
             case "Ring" -> "Ring";

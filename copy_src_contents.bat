@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set OUTPUT_FILE=gear-filter-project.txt
+set OUTPUT_FILE=gear-filter-codebase.txt
 set SRC_DIR=src/main/java/com
 
 REM Clear or create the output file

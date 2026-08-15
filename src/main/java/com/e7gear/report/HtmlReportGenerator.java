@@ -250,7 +250,7 @@ public final class HtmlReportGenerator {
 
     private static String generateDeleteSections(Map<String, List<AnalysisResult>> deleteBySlot, List<String> slotOrder) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<h2>🗑️ Top DELETE_CANDIDATE by Slot (Lowest Score)</h2>");
+        sb.append("<h2>🗑️ Top <span class=\"badge delete\">DELETE_CANDIDATE</span> by Slot (Lowest Score)</h2>");
         boolean hasDeletes = false;
         for (String slot : slotOrder) {
             List<AnalysisResult> slotDeletes = deleteBySlot.getOrDefault(slot, List.of());
@@ -272,7 +272,7 @@ public final class HtmlReportGenerator {
 
     private static String generateReforgeSections(Map<String, List<AnalysisResult>> reforgeBySet) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<h2>🔧 Top REFORGE_CANDIDATE by Set (Lowest Current Score, Reforge makes them viable)</h2>");
+        sb.append("<h2>🔧 Top <span class=\"badge reforge\">REFORGE_CANDIDATE</span> by Set (Lowest Current Score, Reforge makes them viable)</h2>");
         boolean hasReforges = false;
         List<String> setOrder = reforgeBySet.keySet().stream().sorted().toList();
         for (String set : setOrder) {
@@ -295,7 +295,7 @@ public final class HtmlReportGenerator {
 
     private static String generateReviewTable(List<AnalysisResult> borderlineReview) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<h2>📋 Borderline REVIEW (Lowest Score, at risk of deletion)</h2>");
+        sb.append("<h2>📋 Borderline <span class=\"badge review\">REVIEW</span> (Lowest Score, at risk of deletion)</h2>");
         sb.append("<div class=\"table-wrap\">");
         sb.append("<table><thead><tr>")
                 .append("<th>Slot</th>")
@@ -410,20 +410,20 @@ public final class HtmlReportGenerator {
         String normalized = normalizeSlot(slotName);
         String filename = SLOT_IMAGES.get(normalized);
         if (filename == null) return normalized;
-        return iconHtml(IMAGE_PATH + filename, normalized, 30);
+        return iconHtml(IMAGE_PATH + filename, normalized, 25);
     }
 
     private static String setIcon(String setRaw) {
         String normalized = normalizeSet(setRaw);
         String filename = SET_IMAGES.get(normalized);
         if (filename == null) return normalized;
-        return iconHtml(IMAGE_PATH + filename, normalized, 30);
+        return iconHtml(IMAGE_PATH + filename, normalized, 25);
     }
 
     private static String statIcon(String abbr) {
         String filename = STAT_IMAGES.get(abbr);
         if (filename == null) return abbr;
-        return iconHtml(IMAGE_PATH + filename, abbr, 25);
+        return iconHtml(IMAGE_PATH + filename, abbr, 20);
     }
 
     private static String iconHtml(String src, String alt, int size) {
@@ -435,16 +435,18 @@ public final class HtmlReportGenerator {
 
     private static String formatMainStat(Gear g) {
         String type = g.getMainStatType();
-        double value = g.getMainStatValue();
         if (type == null) return "";
+
+        double value = g.getMainStatValue();
         String abbr = abbreviateStat(type);
         String valStr = (value % 1 == 0) ? String.format("%d", (long) value) : String.format("%.1f", value);
-        // Wrap in a flex container: icon and value are aligned vertically, and value text is 20px
-        return "<span style=\"display:inline-flex;align-items:center;font-size:20px;\">"
-                + statIcon(abbr) + " " + valStr
-                + "</span>";
-    }
 
+        return String.format(
+                "<span class=\"stat-main\">%s %s</span>",
+                statIcon(abbr),
+                valStr
+        );
+    }
     private static String formatSubstatsWithIcons(Gear g) {
         if (g.getSubstats() == null || g.getSubstats().isEmpty()) return "";
 
