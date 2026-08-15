@@ -31,6 +31,11 @@ public class Main {
         // --- Load configuration ---
         FilterConfig config = ConfigLoader.load();
 
+        // --- Shared components ---
+        GearScorer gearScorer = new GearScorer();
+        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
+        DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
+
         Path inputPath = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
         Path outputPath = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
 
@@ -49,15 +54,7 @@ public class Main {
             throw new IllegalStateException("Gear inventory contains no items");
         }
 
-        // 3. GearScorer
-        GearScorer gearScorer = new GearScorer();
-
-        // 4. RoleEvaluator
-        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
-
-        // 5. DecisionEngine with config
-        DecisionEngine decisionEngine = new DecisionEngine(config);
-
+        // 3. Process +15 items
         List<AnalysisResult> results = items.stream()
                 .filter(gear -> gear.getEnhance() == 15)
                 .map(gear -> {
@@ -68,7 +65,7 @@ public class Main {
                 })
                 .toList();
 
-        // 6. Print summary
+        // 4. Print summary (including KEEP_MOD_CANDIDATE)
         Map<Quality, Long> qualityCounts = results.stream()
                 .collect(Collectors.groupingBy(
                         result -> result.decision().quality(),
@@ -78,49 +75,28 @@ public class Main {
         System.out.println("Inventory: " + items.size());
         System.out.println("+15: " + results.size());
         System.out.println("KEEP: " + qualityCounts.getOrDefault(Quality.KEEP, 0L));
+        System.out.println("KEEP_MOD_CANDIDATE: " + qualityCounts.getOrDefault(Quality.KEEP_MOD_CANDIDATE, 0L));
         System.out.println("REVIEW: " + qualityCounts.getOrDefault(Quality.REVIEW, 0L));
         System.out.println("DELETE_CANDIDATE: "
                 + qualityCounts.getOrDefault(Quality.DELETE_CANDIDATE, 0L));
 
-        // 7. Write CSV report
+        // 5. Write CSV report
         writeCsv(outputPath, results);
 
         System.out.println("CSV: " + outputPath.toAbsolutePath());
     }
 
-    // CSV writing and formatting (unchanged)
-    private static void writeCsv(
-            Path outputPath,
-            List<AnalysisResult> results
-    ) throws IOException {
+    // ---------- CSV writing ----------
+    private static void writeCsv(Path outputPath, List<AnalysisResult> results) throws IOException {
         StringBuilder csv = new StringBuilder();
 
         csv.append(String.join(",",
-                "id",
-                "ingameId",
-                "gear",
-                "type",
-                "set",
-                "rank",
-                "level",
-                "enhance",
-                "mainStatType",
-                "mainStatValue",
-                "substats",
-                "gearScore",
-                "dScore",
-                "sScore",
-                "cScore",
-                "maxEnhancementRolls",
-                "totalEnhancementRolls",
-                "hasSpike",
-                "hasModified",
-                "bestRole",
-                "usefulStatCount",
-                "slotPreferredStatCount",
-                "mainStatPreferred",
-                "quality",
-                "reason"
+                "id", "ingameId", "gear", "type", "set", "rank", "level", "enhance",
+                "mainStatType", "mainStatValue", "substats",
+                "gearScore", "dScore", "sScore", "cScore",
+                "maxEnhancementRolls", "totalEnhancementRolls", "hasSpike", "hasModified",
+                "bestRole", "usefulStatCount", "slotPreferredStatCount", "mainStatPreferred",
+                "quality", "reason"
         )).append('\n');
 
         for (AnalysisResult result : results) {
@@ -141,7 +117,7 @@ public class Main {
                     gear.getRank(),
                     gear.getLevel(),
                     gear.getEnhance(),
-                    abbreviateStatType(gear.getMainStatType()), // <-- Abbreviated MainStatType
+                    abbreviateStatType(gear.getMainStatType()),
                     gear.getMainStatValue(),
                     formatSubstats(gear.getSubstats()),
                     score.score(),
@@ -171,20 +147,15 @@ public class Main {
     }
 
     private static String csvEscape(Object value) {
-        if (value == null) {
-            return "";
-        }
-
+        if (value == null) return "";
         String text = String.valueOf(value);
-
-        if (text.contains(",") || text.contains("\"")
-                || text.contains("\n") || text.contains("\r")) {
+        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r")) {
             return "\"" + text.replace("\"", "\"\"") + "\"";
         }
-
         return text;
     }
 
+    // ---------- Stat formatting ----------
     private static String formatSubstats(List<Substat> substats) {
         if (substats == null || substats.isEmpty()) {
             return "";
@@ -210,6 +181,5 @@ public class Main {
         return st == null ? type : st.abbreviation();
     }
 
-    private record AnalysisResult(Gear gear, Decision decision) {
-    }
+    private record AnalysisResult(Gear gear, Decision decision) {}
 }

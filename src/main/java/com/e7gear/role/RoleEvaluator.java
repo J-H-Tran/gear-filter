@@ -202,4 +202,8 @@ public final class RoleEvaluator {
     public static Set<StatType> statsFor(Role role) {
         return ROLE_STATS.getOrDefault(role, Set.of());
     }
+
+    public static Set<StatType> getRoleStats(Role role) {
+        return ROLE_STATS.getOrDefault(role, Set.of());
+    }
 }

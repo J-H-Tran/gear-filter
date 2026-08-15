@@ -10,6 +10,7 @@ import com.e7gear.role.RoleEvaluator;
 import com.e7gear.role.RoleScore;
 import com.e7gear.scorer.GearScore;
 import com.e7gear.scorer.GearScorer;
+import com.e7gear.stats.StatType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.BufferedWriter;
@@ -32,6 +33,9 @@ public final class GearInventoryCsvReport {
     public static void main(String[] args) throws Exception {
         // --- Load config ---
         FilterConfig config = ConfigLoader.load();
+        GearScorer gearScorer = new GearScorer();
+        RoleEvaluator roleEvaluator = new RoleEvaluator(gearScorer);
+        DecisionEngine decisionEngine = new DecisionEngine(config, gearScorer);
 
         Path input = args.length > 0 ? Path.of(args[0]) : Path.of("gear.txt");
         Path output = args.length > 1 ? Path.of(args[1]) : Path.of("gear-analysis.csv");
@@ -39,16 +43,12 @@ public final class GearInventoryCsvReport {
         ObjectMapper mapper = new ObjectMapper();
         GearInventory inventory = mapper.readValue(input.toFile(), GearInventory.class);
 
-        GearScorer scorer = new GearScorer();
-        RoleEvaluator roleEvaluator = new RoleEvaluator(scorer);
-        DecisionEngine decisionEngine = new DecisionEngine(config);
-
         try (BufferedWriter writer = Files.newBufferedWriter(output)) {
             writer.write(HEADER);
             writer.newLine();
 
             for (Gear gear : inventory.getItems()) {
-                GearScore score = scorer.score(gear);
+                GearScore score = gearScorer.score(gear);
                 RoleEvaluation roles = roleEvaluator.evaluate(gear);
                 Decision decision = decisionEngine.decide(gear, score, roles);
 
@@ -90,20 +90,26 @@ public final class GearInventoryCsvReport {
         System.out.println("CSV: " + output.toAbsolutePath());
     }
 
+    // Use abbreviated stat names in CSV for consistency (optional but recommended)
     private static String formatSubstats(List<Substat> substats) {
         if (substats == null || substats.isEmpty()) {
             return "\"\"";
         }
 
         String formatted = substats.stream()
-                .map(s -> String.format("%s=%.1f(r%d%s)",
-                        s.getType(),
-                        s.getValue(),
-                        s.getRolls(),
-                        s.isModified() ? "*" : ""))
+                .map(s -> {
+                    StatType st = StatType.fromString(s.getType());
+                    String typeName = st == null ? s.getType() : st.abbreviation();
+                    double val = s.getValue();
+                    String valStr = (val % 1 == 0) ? String.format("%d", (long) val) : String.format("%.1f", val);
+                    return String.format("%s=%s(r%d%s)",
+                            typeName,
+                            valStr,
+                            s.getRolls(),
+                            s.isModified() ? "*" : "");
+                })
                 .collect(Collectors.joining("; "));
 
-        // Wrap in double quotes for CSV safety
         return "\"" + formatted + "\"";
     }
 
